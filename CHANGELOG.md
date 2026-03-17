@@ -38,7 +38,6 @@ Complete rewrite from bash script to full-screen Go TUI.
 ### Removed
 - `gum` dependency (replaced by Bubbletea)
 - `jq` dependency (replaced by native JSON parsing)
-- `package.json` (no longer a Node.js project)
 
 ### Changed
 - Rewritten from bash to Go using Bubbletea v2, Bubbles v2, and Lipgloss v2

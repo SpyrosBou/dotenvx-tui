@@ -13,6 +13,10 @@ var version = "dev"
 
 const usage = `dotenvx-tui — interactive TUI for managing dotenvx-encrypted environment variables
 
+Install:
+  npm install -g dotenvx-tui
+  npx dotenvx-tui
+
 Usage:
   dotenvx-tui [directory]
 
