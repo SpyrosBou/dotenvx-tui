@@ -1,0 +1,5 @@
+dotenvx-tui
+dist/
+.env*
+!env-manage.sh
+.superpowers/
