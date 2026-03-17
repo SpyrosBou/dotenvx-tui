@@ -1,5 +1,7 @@
 # dotenvx-tui
 
+> v2.0.0 | [Changelog](CHANGELOG.md)
+
 Full-screen terminal UI for managing [dotenvx](https://dotenvx.com)-encrypted environment variables.
 
 Browse, set, diff, import, and export secrets across environments — with a three-panel layout, multi-select, and keyboard-driven navigation.
@@ -21,7 +23,7 @@ Browse, set, diff, import, and export secrets across environments — with a thr
 | Tool | Install |
 |------|---------|
 | [dotenvx](https://dotenvx.com) | `brew install dotenvx/brew/dotenvx` |
-| [Go 1.24+](https://go.dev) | `brew install go` (build only) |
+| [Go 1.26+](https://go.dev) | `brew install go` (build only) |
 
 **No longer requires** `gum` or `jq` — the Go rewrite handles everything natively.
 
@@ -121,6 +123,18 @@ On launch, the TUI scans the target directory for dotenvx-encrypted `.env.*` fil
 - `.envrc` — direnv configuration
 - `.env.vault` — dotenvx vault files
 - Files without `DOTENV_PUBLIC_KEY` header
+
+## Upgrading from v1
+
+v2 is a complete rewrite in Go. The original bash script is preserved at `legacy/env-manage.sh` if you need it.
+
+**What changed:**
+- No more `gum` or `jq` dependencies — single Go binary
+- Full-screen TUI replaces sequential prompts
+- Persistent session — no more restarting after each action
+- Multi-select batch operations
+- Clipboard, import, export, and file watching are new
+- Memory-safe secret handling
 
 ## License
 
