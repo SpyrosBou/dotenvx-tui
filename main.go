@@ -5,44 +5,8 @@ import (
 	"os"
 
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
+	"github.com/warui1/dotenvx-tui/internal/ui"
 )
-
-type model struct {
-	width     int
-	height    int
-	targetDir string
-}
-
-func newModel(targetDir string) model {
-	return model{targetDir: targetDir}
-}
-
-func (m model) Init() tea.Cmd {
-	return nil
-}
-
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyPressMsg:
-		switch msg.String() {
-		case "q", "ctrl+c":
-			return m, tea.Quit
-		}
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-	}
-	return m, nil
-}
-
-func (m model) View() tea.View {
-	content := lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, "dotenvx-tui")
-
-	v := tea.NewView(content)
-	v.AltScreen = true
-	return v
-}
 
 func main() {
 	targetDir := ""
@@ -57,7 +21,7 @@ func main() {
 		targetDir = dir
 	}
 
-	p := tea.NewProgram(newModel(targetDir))
+	p := tea.NewProgram(ui.NewModel(targetDir))
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
