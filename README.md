@@ -1,88 +1,126 @@
 # dotenvx-tui
 
-Interactive terminal UI for managing [dotenvx](https://dotenvx.com)-encrypted environment variables.
+Full-screen terminal UI for managing [dotenvx](https://dotenvx.com)-encrypted environment variables.
 
-Browse, read, set, and diff secrets across environments — without memorizing dotenvx flags or file paths.
+Browse, set, diff, import, and export secrets across environments — with a three-panel layout, multi-select, and keyboard-driven navigation.
+
+```
+┌─ Scopes ────┐ ┌─ Envs ───┐ ┌─ Keys ──────────────┐
+│ > apps/api  │ │ > local  │ │ [x] DATABASE_URL    │
+│   apps/web  │ │   staging│ │ [ ] API_KEY         │
+│   pkg/db    │ │   prod   │ │ [x] REDIS_URL       │
+└─────────────┘ └──────────┘ └─────────────────────┘
+┌─ Preview ────────────────────────────────────────┐
+│ DATABASE_URL = post••••••••••••••••••            │
+└──────────────────────────────────────────────────┘
+ s:set  g:get  d:diff  i:import  e:export  c:copy
+```
 
 ## Prerequisites
 
 | Tool | Install |
 |------|---------|
 | [dotenvx](https://dotenvx.com) | `brew install dotenvx/brew/dotenvx` |
-| [gum](https://github.com/charmbracelet/gum) | `brew install gum` |
-| [jq](https://jqlang.github.io/jq/) | `brew install jq` |
+| [Go 1.24+](https://go.dev) | `brew install go` (build only) |
+
+**No longer requires** `gum` or `jq` — the Go rewrite handles everything natively.
+
+## Install
+
+```bash
+# From source
+go install github.com/warui1/dotenvx-tui@latest
+
+# Or clone and build
+git clone https://github.com/warui1/dotenvx-tui
+cd dotenvx-tui
+make install
+```
 
 ## Usage
 
 ```bash
-# Run from inside a project
-cd ~/my-project
-bash /path/to/env-manage.sh
+# Run in current directory
+dotenvx-tui
 
-# Or pass the project path as an argument
-bash /path/to/env-manage.sh ~/my-project
+# Or specify a project directory
+dotenvx-tui ~/my-project
 
-# Or if cloned and using pnpm
-cd ~/projects/dotenvx-tui
-pnpm start ~/my-project
+# Show help
+dotenvx-tui --help
 ```
 
-## How it works
+## Keybindings
 
-On launch, the script scans the target directory for dotenvx-encrypted `.env.*` files (identified by the `DOTENV_PUBLIC_KEY` header that dotenvx adds during encryption). It derives available **scopes** (directories) and **environments** (file suffixes) automatically — no configuration needed.
+### Navigation
 
-### Supported project structures
+| Key | Action |
+|-----|--------|
+| `tab` / `shift+tab` | Switch panels (Scopes → Envs → Keys) |
+| `j`/`k` or `↑`/`↓` | Move cursor (circular wrapping) |
+| `h`/`l` | Previous/Next panel |
+| `enter` | Select item / Reveal decrypted value |
+| `esc` | Close overlay / Go back |
 
-**Flat project** — env files at the root:
-```
-.env.local
-.env.staging
-.env.production
-```
-The scope prompt is skipped entirely since there's only one.
+### Selection
 
-**Monorepo** — env files nested in workspaces:
-```
-apps/api/.env.local
-apps/api/.env.staging
-apps/web/.env.local
-apps/web/.env.production
-packages/db/.env.local
-```
-You'll be prompted to pick a scope first, then an environment within it.
+| Key | Action |
+|-----|--------|
+| `space` | Toggle multi-select (Keys panel) |
+| `a` | Select all / Deselect all |
 
-**Any depth works** — the script uses recursive `find`, so `infra/deploy/.env.production` is just as valid.
+### Actions
 
-## Actions
+| Key | Action |
+|-----|--------|
+| `s` | Set value (batch mode if multi-selected) |
+| `g` | Get / decrypt value |
+| `d` | Diff two environments |
+| `i` | Import from plaintext .env file |
+| `e` | Export to clipboard |
+| `c` | Copy value to clipboard |
+| `?` | Help overlay |
+| `q` / `ctrl+c` | Quit |
 
-### set — Add or rotate a secret
+## Features
 
-Presents existing keys for the selected file, lets you pick one to update or create a new one. Shows the current value (masked) before prompting for the new value. Encrypts and stores via `dotenvx set`.
+### Three-Panel Browser
+Scopes (directories), Environments (file suffixes), and Keys are displayed simultaneously. Navigate between panels with Tab, within panels with j/k.
 
-### get — View a decrypted value
+### Multi-Select Batch Operations
+Select multiple keys with Space, then apply actions to all selected keys at once. Set values sequentially, copy all to clipboard, or export selected keys.
 
-Lists all keys in the selected file with a fuzzy-searchable filter. Decrypts and displays the selected value.
+### Environment Diff
+Compare two environments within the same scope. Color-coded output shows keys only in left, only in right, different values, and identical keys.
 
-### list — Show all vars in a file
+### Bulk Import
+Import keys from a plaintext `.env` file into an encrypted one. Select which keys to import with checkboxes before confirming.
 
-Displays all decrypted key names for a given scope and environment.
+### Export to Clipboard
+Export decrypted key-value pairs to clipboard in `KEY=VALUE` format.
 
-### diff — Compare two environments
+### Live File Watching
+Panels auto-refresh when `.env` files change on disk (via fsnotify).
 
-Compares two environment files within the same scope and reports:
-- Keys only in the first environment
-- Keys only in the second environment
-- Keys present in both but with different values
-- Count of identical keys
+### Security
+- Decrypted values wrapped in `SecureBytes` type that zeros memory on cleanup
+- Values masked by default (first 4 chars visible + bullets)
+- Auto-mask after 30 seconds of reveal
+- Key name validation (`[A-Za-z_][A-Za-z0-9_]*`)
+- Path traversal prevention
+- Minimal subprocess environment (PATH/HOME/TERM only)
+- No secrets in error messages
 
-## Excluded from discovery
+## Project Structure Discovery
 
-The following files are ignored during scanning:
+On launch, the TUI scans the target directory for dotenvx-encrypted `.env.*` files (identified by the `DOTENV_PUBLIC_KEY` header). It derives **scopes** (directories) and **environments** (file suffixes) automatically.
+
+### Excluded from discovery
 - `.env.keys` — private key files
-- `*.example` — template files
+- `*.example` / `*.sample` — template files
 - `.envrc` — direnv configuration
 - `.env.vault` — dotenvx vault files
-- Any `.env.*` file without a `DOTENV_PUBLIC_KEY` header (not encrypted by dotenvx)
+- Files without `DOTENV_PUBLIC_KEY` header
 
 ## License
 

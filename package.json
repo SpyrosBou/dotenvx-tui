@@ -1,9 +1,0 @@
-{
-  "name": "dotenvx-tui",
-  "version": "1.0.0",
-  "description": "Interactive CLI for managing encrypted env vars via dotenvx",
-  "license": "MIT",
-  "scripts": {
-    "start": "bash env-manage.sh"
-  }
-}

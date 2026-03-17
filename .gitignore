@@ -1,5 +1,5 @@
 dotenvx-tui
 dist/
 .env*
-!env-manage.sh
+!legacy/env-manage.sh
 .superpowers/
