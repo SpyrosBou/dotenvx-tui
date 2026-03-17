@@ -1,10 +1,15 @@
 package ui
 
 import (
+	"context"
+	"fmt"
+
 	tea "charm.land/bubbletea/v2"
 	"charm.land/bubbles/v2/key"
+	clip "github.com/warui1/dotenvx-tui/internal/clipboard"
 	"github.com/warui1/dotenvx-tui/internal/dotenvx"
 	"github.com/warui1/dotenvx-tui/internal/theme"
+	"github.com/warui1/dotenvx-tui/internal/ui/overlays"
 )
 
 // Update handles all messages and updates the model.
@@ -181,20 +186,16 @@ func (m Model) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.handleCopy()
 
 	case key.Matches(msg, km.Set):
-		m.activeOverlay = OverlaySetValue
-		return m, nil
+		return m.openSetOverlay()
 
 	case key.Matches(msg, km.Diff):
-		m.activeOverlay = OverlayDiff
-		return m, nil
+		return m.openDiffOverlay()
 
 	case key.Matches(msg, km.Import):
-		m.activeOverlay = OverlayImport
-		return m, nil
+		return m.openImportOverlay()
 
 	case key.Matches(msg, km.Export):
-		m.activeOverlay = OverlayExport
-		return m, nil
+		return m.openExportOverlay()
 	}
 
 	return m, nil
@@ -277,19 +278,194 @@ func (m Model) selectEnv(_ string) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleCopy() (tea.Model, tea.Cmd) {
-	// Placeholder — will be implemented in clipboard task
-	cmd := m.setStatus("Copy not yet implemented", StatusWarning)
+	file := m.currentFile()
+	if file == "" || m.runner == nil {
+		return m, nil
+	}
+
+	selectedKeys := m.keyPanel.SelectedItems()
+	if len(selectedKeys) == 0 {
+		return m, nil
+	}
+
+	runner := m.runner
+	return m, func() tea.Msg {
+		if len(selectedKeys) == 1 {
+			raw, err := runner.GetValue(context.Background(), file, selectedKeys[0])
+			if err != nil {
+				return SetErrorMsg{Err: err}
+			}
+			text := string(raw)
+			for i := range raw {
+				raw[i] = 0
+			}
+			if err := clip.Write(text); err != nil {
+				return SetErrorMsg{Err: err}
+			}
+			return CopyCompleteMsg{Key: selectedKeys[0]}
+		}
+
+		// Multi-copy
+		kv, err := runner.GetAll(context.Background(), file)
+		if err != nil {
+			return SetErrorMsg{Err: err}
+		}
+		var lines []string
+		for _, k := range selectedKeys {
+			if v, ok := kv[k]; ok {
+				lines = append(lines, fmt.Sprintf("%s=%s", k, string(v)))
+			}
+		}
+		for _, v := range kv {
+			for i := range v {
+				v[i] = 0
+			}
+		}
+		text := ""
+		for i, l := range lines {
+			if i > 0 {
+				text += "\n"
+			}
+			text += l
+		}
+		if err := clip.Write(text); err != nil {
+			return SetErrorMsg{Err: err}
+		}
+		return CopyMultiCompleteMsg{Count: len(lines)}
+	}
+}
+
+func (m Model) openSetOverlay() (tea.Model, tea.Cmd) {
+	file := m.currentFile()
+	if file == "" || m.runner == nil {
+		return m, nil
+	}
+	m.activeOverlay = OverlaySetValue
+	keys := m.keyPanel.SelectedItems()
+	existingKey := ""
+	if len(keys) == 1 && m.keyPanel.SelectionCount() == 0 {
+		existingKey = keys[0]
+		keys = nil
+	}
+	cmd := m.setOverlay.Open(file, keys, existingKey, m.runner)
 	return m, cmd
 }
 
+func (m Model) openDiffOverlay() (tea.Model, tea.Cmd) {
+	scope := m.scopePanel.SelectedItem()
+	env := m.envPanel.SelectedItem()
+	envs := dotenvx.EnvsForScope(m.envFiles, scope)
+	if len(envs) < 2 {
+		cmd := m.setStatus("Need at least 2 environments to diff", StatusWarning)
+		return m, cmd
+	}
+	m.activeOverlay = OverlayDiff
+	m.diffOverlay.Open(scope, env, envs, m.envFiles, m.runner)
+	return m, nil
+}
+
+func (m Model) openImportOverlay() (tea.Model, tea.Cmd) {
+	file := m.currentFile()
+	if file == "" || m.runner == nil {
+		return m, nil
+	}
+	m.activeOverlay = OverlayImport
+	cmd := m.importOverlay.Open(m.targetDir, file, m.runner)
+	return m, cmd
+}
+
+func (m Model) openExportOverlay() (tea.Model, tea.Cmd) {
+	file := m.currentFile()
+	if file == "" || m.runner == nil {
+		return m, nil
+	}
+	m.activeOverlay = OverlayExport
+	keys := m.keyPanel.SelectedItems()
+	m.exportOverlay.Open(file, keys, m.runner)
+	return m, nil
+}
+
 func (m Model) updateOverlay(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// For now, just handle Esc to close overlays
-	if kmsg, ok := msg.(tea.KeyPressMsg); ok {
-		if key.Matches(kmsg, m.keyMap.Back) || key.Matches(kmsg, m.keyMap.Quit) {
+	switch m.activeOverlay {
+	case OverlaySetValue:
+		cmd, handled := m.setOverlay.Update(msg)
+		if !handled {
+			break
+		}
+		if !m.setOverlay.Active {
 			m.activeOverlay = OverlayNone
-			return m, nil
+		}
+		return m, cmd
+
+	case OverlayDiff:
+		cmd, handled := m.diffOverlay.Update(msg)
+		if !handled {
+			break
+		}
+		if !m.diffOverlay.Active {
+			m.activeOverlay = OverlayNone
+		}
+		return m, cmd
+
+	case OverlayImport:
+		cmd, handled := m.importOverlay.Update(msg)
+		if !handled {
+			break
+		}
+		if !m.importOverlay.Active {
+			m.activeOverlay = OverlayNone
+		}
+		return m, cmd
+
+	case OverlayExport:
+		cmd, handled := m.exportOverlay.Update(msg)
+		if !handled {
+			break
+		}
+		if !m.exportOverlay.Active {
+			m.activeOverlay = OverlayNone
+		}
+		return m, cmd
+
+	case OverlayHelp:
+		if kmsg, ok := msg.(tea.KeyPressMsg); ok {
+			if key.Matches(kmsg, m.keyMap.Back) || key.Matches(kmsg, m.keyMap.Help) {
+				m.activeOverlay = OverlayNone
+				return m, nil
+			}
 		}
 	}
+
+	// Handle overlay result messages globally
+	switch msg := msg.(type) {
+	case overlays.SetDoneMsg:
+		m.activeOverlay = OverlayNone
+		cmd := m.setStatus("Set "+msg.Key+" in "+msg.File, StatusSuccess)
+		return m, tea.Batch(cmd, m.loadKeys(msg.File))
+
+	case overlays.SetErrorMsg:
+		cmd := m.setStatus("Set failed: "+msg.Err.Error(), StatusError)
+		return m, cmd
+
+	case overlays.ImportDoneMsg:
+		m.activeOverlay = OverlayNone
+		cmd := m.setStatus(fmt.Sprintf("Imported %d keys into %s", msg.Count, msg.File), StatusSuccess)
+		return m, tea.Batch(cmd, m.loadKeys(msg.File))
+
+	case overlays.ImportErrorMsg:
+		cmd := m.setStatus("Import failed: "+msg.Err.Error(), StatusError)
+		return m, cmd
+
+	case overlays.ExportDoneMsg:
+		m.activeOverlay = OverlayNone
+		cmd := m.setStatus(fmt.Sprintf("Copied %d key-value pairs to clipboard", msg.Count), StatusSuccess)
+		return m, cmd
+
+	case overlays.ExportErrorMsg:
+		cmd := m.setStatus("Export failed: "+msg.Err.Error(), StatusError)
+		return m, cmd
+	}
+
 	return m, nil
 }
 

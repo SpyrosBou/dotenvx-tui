@@ -170,6 +170,14 @@ func (m Model) renderOverlayOnTop(bg string) string {
 	switch m.activeOverlay {
 	case OverlayHelp:
 		overlayContent = m.renderHelpOverlay()
+	case OverlaySetValue:
+		overlayContent = m.setOverlay.View(m.width)
+	case OverlayDiff:
+		overlayContent = m.diffOverlay.View(m.width)
+	case OverlayImport:
+		overlayContent = m.importOverlay.View(m.width)
+	case OverlayExport:
+		overlayContent = m.exportOverlay.View(m.width)
 	default:
 		overlayContent = m.styles.Overlay.
 			Width(min(50, m.width-4)).

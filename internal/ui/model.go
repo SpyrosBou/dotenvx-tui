@@ -8,6 +8,7 @@ import (
 	"github.com/warui1/dotenvx-tui/internal/dotenvx"
 	"github.com/warui1/dotenvx-tui/internal/secret"
 	"github.com/warui1/dotenvx-tui/internal/theme"
+	"github.com/warui1/dotenvx-tui/internal/ui/overlays"
 	"github.com/warui1/dotenvx-tui/internal/ui/panels"
 )
 
@@ -49,8 +50,12 @@ type Model struct {
 	statusLevel StatusLevel
 	statusID    int
 
-	// Overlay
-	activeOverlay OverlayKind
+	// Overlays
+	activeOverlay  OverlayKind
+	setOverlay     overlays.SetValueOverlay
+	diffOverlay    overlays.DiffOverlay
+	importOverlay  overlays.ImportOverlay
+	exportOverlay  overlays.ExportOverlay
 
 	// Key bindings
 	keyMap KeyMap
@@ -69,14 +74,19 @@ type Model struct {
 // NewModel creates the initial application model.
 func NewModel(targetDir string) Model {
 	th := theme.NewTheme(true) // default to dark, updated on BackgroundColorMsg
+	styles := theme.NewStyles(th)
 	return Model{
-		targetDir:    targetDir,
-		hasDarkBG:    true,
-		theme:        th,
-		styles:       theme.NewStyles(th),
-		keyMap:       DefaultKeyMap(),
-		keyPanel:     panels.NewKeyListPanel(),
-		focusedPanel: PanelScopes,
+		targetDir:     targetDir,
+		hasDarkBG:     true,
+		theme:         th,
+		styles:        styles,
+		keyMap:        DefaultKeyMap(),
+		keyPanel:      panels.NewKeyListPanel(),
+		focusedPanel:  PanelScopes,
+		setOverlay:    overlays.NewSetValueOverlay(styles),
+		diffOverlay:   overlays.NewDiffOverlay(styles),
+		importOverlay: overlays.NewImportOverlay(styles),
+		exportOverlay: overlays.NewExportOverlay(styles),
 	}
 }
 
