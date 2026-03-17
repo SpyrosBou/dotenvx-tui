@@ -121,7 +121,7 @@ func (o *ImportOverlay) Update(msg tea.Msg) (tea.Cmd, bool) {
 			}
 			return nil, true
 
-		case key.Matches(msg, key.NewBinding(key.WithKeys(" "))):
+		case key.Matches(msg, key.NewBinding(key.WithKeys("space"))):
 			if o.Step == ImportStepSelectKeys && len(o.Keys) > 0 {
 				o.Keys[o.KeyCursor].Selected = !o.Keys[o.KeyCursor].Selected
 			}

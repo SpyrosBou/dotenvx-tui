@@ -93,6 +93,6 @@ func (p *EnvPanel) Title(styles theme.Styles, focused bool) string {
 }
 
 // PanelStyle returns the border style for this panel.
-func (p *EnvPanel) PanelStyle(styles theme.Styles, focused bool) lipgloss.Style {
-	return theme.PanelStyle(styles, focused, p.Width, p.Height)
+func (p *EnvPanel) PanelStyle(t theme.Theme, focused bool) lipgloss.Style {
+	return theme.PanelStyle(t, focused, p.Width, p.Height)
 }

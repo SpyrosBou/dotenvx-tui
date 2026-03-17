@@ -50,7 +50,7 @@ func DefaultKeyMap() KeyMap {
 			key.WithHelp("enter", "select"),
 		),
 		ToggleSel: key.NewBinding(
-			key.WithKeys(" "),
+			key.WithKeys("space"),
 			key.WithHelp("space", "toggle select"),
 		),
 		SelectAll: key.NewBinding(

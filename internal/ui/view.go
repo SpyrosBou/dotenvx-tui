@@ -71,7 +71,7 @@ func (m Model) renderMain() string {
 }
 
 func (m Model) renderPanel(content, title string, focused bool, width, height int) string {
-	style := theme.PanelStyle(m.styles, focused, width-2, height) // -2 for border
+	style := theme.PanelStyle(m.theme, focused, width-2, height) // -2 for border
 	return style.Render(title + "\n" + content)
 }
 

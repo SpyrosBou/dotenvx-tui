@@ -148,6 +148,6 @@ func (p *KeyListPanel) Title(styles theme.Styles, focused bool) string {
 }
 
 // PanelStyle returns the border style for this panel.
-func (p *KeyListPanel) PanelStyle(styles theme.Styles, focused bool) lipgloss.Style {
-	return theme.PanelStyle(styles, focused, p.Width, p.Height)
+func (p *KeyListPanel) PanelStyle(t theme.Theme, focused bool) lipgloss.Style {
+	return theme.PanelStyle(t, focused, p.Width, p.Height)
 }

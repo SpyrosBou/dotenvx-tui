@@ -137,17 +137,14 @@ func NewStyles(t Theme) Styles {
 }
 
 // PanelStyle returns the appropriate border style for a panel based on focus state.
-func PanelStyle(s Styles, focused bool, width, height int) lipgloss.Style {
+func PanelStyle(t Theme, focused bool, width, height int) lipgloss.Style {
 	base := lipgloss.NewStyle().
 		Width(width).
-		Height(height)
+		Height(height).
+		Border(lipgloss.RoundedBorder())
 
 	if focused {
-		return base.
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(s.FocusedBorder.GetBorderBottomForeground())
+		return base.BorderForeground(t.Primary)
 	}
-	return base.
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(s.BlurredBorder.GetBorderBottomForeground())
+	return base.BorderForeground(t.Dim)
 }
