@@ -9,7 +9,7 @@ const path = require("path");
 const { execSync } = require("child_process");
 const { createGunzip } = require("zlib");
 
-const REPO = "warui1/dotenvx-tui";
+const REPO = "SpyrosBou/dotenvx-tui";
 const NAME = "dotenvx-tui";
 const VERSION = require("./package.json").version;
 
