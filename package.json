@@ -1,0 +1,9 @@
+{
+  "name": "secrets",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Interactive CLI for managing encrypted env vars via dotenvx",
+  "scripts": {
+    "secrets": "bash env-manage.sh"
+  }
+}
