@@ -23,20 +23,18 @@ Browse, set, diff, import, and export secrets across environments — with a thr
 | Tool | Install |
 |------|---------|
 | [dotenvx](https://dotenvx.com) | `brew install dotenvx/brew/dotenvx` |
-| [Go 1.26+](https://go.dev) | `brew install go` (build only) |
-
-**No longer requires** `gum` or `jq` — the Go rewrite handles everything natively.
 
 ## Install
 
 ```bash
-# From source
-go install github.com/warui1/dotenvx-tui@latest
+# Via npm (recommended)
+npm install -g dotenvx-tui
 
-# Or clone and build
-git clone https://github.com/warui1/dotenvx-tui
-cd dotenvx-tui
-make install
+# Or run directly with npx
+npx dotenvx-tui
+
+# From source (requires Go 1.26+)
+go install github.com/warui1/dotenvx-tui@latest
 ```
 
 ## Usage

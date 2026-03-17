@@ -3,3 +3,4 @@ dist/
 .env*
 !legacy/env-manage.sh
 .superpowers/
+npm/bin/dotenvx-tui

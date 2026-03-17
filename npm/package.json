@@ -1,0 +1,33 @@
+{
+  "name": "dotenvx-tui",
+  "version": "2.0.0",
+  "description": "Full-screen terminal UI for managing dotenvx-encrypted environment variables",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/warui1/dotenvx-tui.git"
+  },
+  "license": "MIT",
+  "author": "warui1",
+  "bin": {
+    "dotenvx-tui": "bin/cli.js"
+  },
+  "scripts": {
+    "postinstall": "node install.js"
+  },
+  "files": [
+    "bin/cli.js",
+    "install.js"
+  ],
+  "keywords": [
+    "dotenvx",
+    "dotenv",
+    "env",
+    "secrets",
+    "tui",
+    "terminal",
+    "encryption"
+  ],
+  "engines": {
+    "node": ">=16"
+  }
+}

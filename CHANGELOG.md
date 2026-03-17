@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file.
 
 Complete rewrite from bash script to full-screen Go TUI.
 
+### Distribution
+- Published to npm: `npm install -g dotenvx-tui` or `npx dotenvx-tui`
+- Automated releases via GoReleaser (cross-compiled binaries + npm + GitHub Releases)
+
 ### Added
 - Three-panel browser layout (Scopes | Environments | Keys)
 - Keyboard-driven navigation with circular wrapping (j/k, Tab/Shift+Tab)

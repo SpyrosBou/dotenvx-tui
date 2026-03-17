@@ -9,7 +9,7 @@ import (
 	"github.com/warui1/dotenvx-tui/internal/ui"
 )
 
-const version = "2.0.0"
+var version = "dev"
 
 const usage = `dotenvx-tui — interactive TUI for managing dotenvx-encrypted environment variables
 
