@@ -1,6 +1,6 @@
 {
   "name": "dotenvx-tui",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "Full-screen terminal UI for managing dotenvx-encrypted environment variables",
   "repository": {
     "type": "git",

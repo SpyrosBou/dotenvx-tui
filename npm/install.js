@@ -55,14 +55,16 @@ function downloadFile(url) {
         res.on("data", (chunk) => {
           chunks.push(chunk);
           downloaded += chunk.length;
+          const mb = (downloaded / 1024 / 1024).toFixed(1);
           if (total > 0) {
             const pct = Math.round((downloaded / total) * 100);
-            const mb = (downloaded / 1024 / 1024).toFixed(1);
-            process.stdout.write(`\r  downloading... ${mb} MB (${pct}%)`);
+            process.stderr.write(`\r  downloading... ${mb} MB (${pct}%)`);
+          } else {
+            process.stderr.write(`\r  downloading... ${mb} MB`);
           }
         });
         res.on("end", () => {
-          if (total > 0) process.stdout.write("\n");
+          process.stderr.write("\n");
           resolve(Buffer.concat(chunks));
         });
         res.on("error", reject);
@@ -91,14 +93,14 @@ async function main() {
     return;
   }
 
-  console.log(`Downloading ${NAME} v${VERSION} for ${platform}/${arch}...`);
+  process.stderr.write(`Downloading ${NAME} v${VERSION} for ${platform}/${arch}...\n`);
 
   try {
     const buffer = await downloadFile(url);
     fs.mkdirSync(binDir, { recursive: true });
     extractTarGz(buffer, binDir);
     fs.chmodSync(binPath, 0o755);
-    console.log(`Installed ${NAME} to ${binPath}`);
+    process.stderr.write(`Installed ${NAME} (${(buffer.length / 1024 / 1024).toFixed(1)} MB)\n`);
   } catch (err) {
     console.error(
       `Failed to download ${NAME}: ${err.message}\n\n` +
