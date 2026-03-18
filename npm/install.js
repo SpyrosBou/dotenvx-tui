@@ -49,9 +49,22 @@ function downloadFile(url) {
         if (res.statusCode !== 200) {
           return reject(new Error(`Download failed: HTTP ${res.statusCode}`));
         }
+        const total = parseInt(res.headers["content-length"] || "0", 10);
         const chunks = [];
-        res.on("data", (chunk) => chunks.push(chunk));
-        res.on("end", () => resolve(Buffer.concat(chunks)));
+        let downloaded = 0;
+        res.on("data", (chunk) => {
+          chunks.push(chunk);
+          downloaded += chunk.length;
+          if (total > 0) {
+            const pct = Math.round((downloaded / total) * 100);
+            const mb = (downloaded / 1024 / 1024).toFixed(1);
+            process.stdout.write(`\r  downloading... ${mb} MB (${pct}%)`);
+          }
+        });
+        res.on("end", () => {
+          if (total > 0) process.stdout.write("\n");
+          resolve(Buffer.concat(chunks));
+        });
         res.on("error", reject);
       })
       .on("error", reject);
