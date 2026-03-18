@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"charm.land/lipgloss/v2"
 	"github.com/warui1/dotenvx-tui/internal/theme"
 )
 
@@ -84,11 +83,6 @@ func (p *ScopePanel) Title(styles theme.Styles, focused bool) string {
 		return styles.FocusedTitle.Render(title)
 	}
 	return styles.BlurredTitle.Render(title)
-}
-
-// PanelStyle returns the border style for this panel.
-func (p *ScopePanel) PanelStyle(t theme.Theme, focused bool) lipgloss.Style {
-	return theme.PanelStyle(t, focused, p.Width, p.Height)
 }
 
 func scopeLabel(scope string) string {

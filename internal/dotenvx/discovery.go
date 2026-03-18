@@ -57,7 +57,7 @@ func Discover(targetDir string) ([]EnvFile, error) {
 		}
 
 		// Check for DOTENV_PUBLIC_KEY header (indicates dotenvx encryption)
-		if !hasPublicKeyHeader(path) {
+		if !HasPublicKeyHeader(path) {
 			return nil
 		}
 
@@ -93,9 +93,9 @@ func Discover(targetDir string) ([]EnvFile, error) {
 	return files, nil
 }
 
-// hasPublicKeyHeader checks if a file contains a DOTENV_PUBLIC_KEY line
+// HasPublicKeyHeader checks if a file contains a DOTENV_PUBLIC_KEY line
 // in its first 20 lines (dotenvx places it at the top).
-func hasPublicKeyHeader(path string) bool {
+func HasPublicKeyHeader(path string) bool {
 	f, err := os.Open(path)
 	if err != nil {
 		return false

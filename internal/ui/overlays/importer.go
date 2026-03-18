@@ -12,6 +12,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	"github.com/warui1/dotenvx-tui/internal/dotenvx"
 	"github.com/warui1/dotenvx-tui/internal/theme"
+	"github.com/warui1/dotenvx-tui/internal/validate"
 )
 
 // ImportStep tracks the current step in the import flow.
@@ -167,7 +168,7 @@ func (o *ImportOverlay) findPlaintextFiles() tea.Cmd {
 				return nil
 			}
 			// Check if it's NOT encrypted (no DOTENV_PUBLIC_KEY)
-			if hasPublicKeyHeader(path) {
+			if dotenvx.HasPublicKeyHeader(path) {
 				return nil
 			}
 			rel, _ := filepath.Rel(targetDir, path)
@@ -181,20 +182,6 @@ func (o *ImportOverlay) findPlaintextFiles() tea.Cmd {
 	}
 }
 
-func hasPublicKeyHeader(path string) bool {
-	f, err := os.Open(path)
-	if err != nil {
-		return false
-	}
-	defer f.Close()
-	scanner := bufio.NewScanner(f)
-	for i := 0; i < 20 && scanner.Scan(); i++ {
-		if strings.Contains(scanner.Text(), "DOTENV_PUBLIC_KEY") {
-			return true
-		}
-	}
-	return false
-}
 
 func (o *ImportOverlay) loadKeysFromFile(file string) tea.Cmd {
 	targetDir := o.TargetDir
@@ -218,6 +205,9 @@ func (o *ImportOverlay) loadKeysFromFile(file string) tea.Cmd {
 				continue
 			}
 			name := strings.TrimSpace(parts[0])
+			if validate.KeyName(name) != nil {
+				continue // skip invalid key names
+			}
 			value := strings.TrimSpace(parts[1])
 			// Remove surrounding quotes
 			value = strings.Trim(value, `"'`)

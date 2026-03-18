@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"charm.land/lipgloss/v2"
 	"github.com/warui1/dotenvx-tui/internal/theme"
 )
 
@@ -92,7 +91,3 @@ func (p *EnvPanel) Title(styles theme.Styles, focused bool) string {
 	return styles.BlurredTitle.Render(title)
 }
 
-// PanelStyle returns the border style for this panel.
-func (p *EnvPanel) PanelStyle(t theme.Theme, focused bool) lipgloss.Style {
-	return theme.PanelStyle(t, focused, p.Width, p.Height)
-}

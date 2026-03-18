@@ -92,10 +92,7 @@ func NewModel(targetDir string) Model {
 
 // Init initializes the model, starting file discovery.
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(
-		m.discoverFiles(),
-		m.initRunner(),
-	)
+	return m.discoverFiles()
 }
 
 func (m Model) discoverFiles() tea.Cmd {
@@ -109,24 +106,12 @@ func (m Model) discoverFiles() tea.Cmd {
 	}
 }
 
-func (m Model) initRunner() tea.Cmd {
-	workDir := m.targetDir
-	return func() tea.Msg {
-		runner, err := dotenvx.NewRunner(workDir)
-		if err != nil {
-			return DiscoveryErrorMsg{Err: err}
-		}
-		_ = runner // stored via a different mechanism
-		return nil
-	}
-}
-
-func (m *Model) setStatus(msg string, level StatusLevel) tea.Cmd {
+func setStatus(m Model, msg string, level StatusLevel) (Model, tea.Cmd) {
 	m.statusID++
 	m.statusMsg = msg
 	m.statusLevel = level
 	id := m.statusID
-	return tea.Tick(4*time.Second, func(_ time.Time) tea.Msg {
+	return m, tea.Tick(4*time.Second, func(_ time.Time) tea.Msg {
 		return ClearStatusMsg{ID: id}
 	})
 }

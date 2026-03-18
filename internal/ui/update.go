@@ -14,6 +14,14 @@ import (
 
 // Update handles all messages and updates the model.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// ctrl+c always quits, even with overlays open
+	if kmsg, ok := msg.(tea.KeyPressMsg); ok {
+		if key.Matches(kmsg, m.keyMap.Quit) {
+			m.cleanup()
+			return m, tea.Quit
+		}
+	}
+
 	// Handle overlay input first if an overlay is active
 	if m.activeOverlay != OverlayNone {
 		return m.updateOverlay(msg)
@@ -51,7 +59,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case KeysLoadErrorMsg:
 		m.loading = false
-		cmd := m.setStatus("Failed to load keys: "+msg.Err.Error(), StatusError)
+		m, cmd := setStatus(m,"Failed to load keys: "+msg.Err.Error(), StatusError)
 		return m, cmd
 
 	case ValueLoadedMsg:
@@ -65,24 +73,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case ValueLoadErrorMsg:
-		cmd := m.setStatus("Failed to decrypt: "+msg.Err.Error(), StatusError)
+		m, cmd := setStatus(m,"Failed to decrypt: "+msg.Err.Error(), StatusError)
 		return m, cmd
 
-	case SetCompleteMsg:
-		cmd := m.setStatus("Set "+msg.Key+" in "+msg.File, StatusSuccess)
-		// Reload keys
-		return m, tea.Batch(cmd, m.loadKeys(msg.File))
-
 	case SetErrorMsg:
-		cmd := m.setStatus("Set failed: "+msg.Err.Error(), StatusError)
+		m, cmd := setStatus(m,"Set failed: "+msg.Err.Error(), StatusError)
 		return m, cmd
 
 	case CopyCompleteMsg:
-		cmd := m.setStatus("Copied "+msg.Key+" to clipboard", StatusSuccess)
+		m, cmd := setStatus(m,"Copied "+msg.Key+" to clipboard", StatusSuccess)
 		return m, cmd
 
 	case CopyMultiCompleteMsg:
-		cmd := m.setStatus(formatCount(msg.Count, "value")+" copied to clipboard", StatusSuccess)
+		m, cmd := setStatus(m,formatCount(msg.Count, "value")+" copied to clipboard", StatusSuccess)
 		return m, cmd
 
 	case ClearStatusMsg:
@@ -390,7 +393,7 @@ func (m Model) openDiffOverlay() (tea.Model, tea.Cmd) {
 	env := m.envPanel.SelectedItem()
 	envs := dotenvx.EnvsForScope(m.envFiles, scope)
 	if len(envs) < 2 {
-		cmd := m.setStatus("Need at least 2 environments to diff", StatusWarning)
+		m, cmd := setStatus(m,"Need at least 2 environments to diff", StatusWarning)
 		return m, cmd
 	}
 	m.activeOverlay = OverlayDiff
@@ -474,29 +477,29 @@ func (m Model) updateOverlay(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case overlays.SetDoneMsg:
 		m.activeOverlay = OverlayNone
-		cmd := m.setStatus("Set "+msg.Key+" in "+msg.File, StatusSuccess)
+		m, cmd := setStatus(m,"Set "+msg.Key+" in "+msg.File, StatusSuccess)
 		return m, tea.Batch(cmd, m.loadKeys(msg.File))
 
 	case overlays.SetErrorMsg:
-		cmd := m.setStatus("Set failed: "+msg.Err.Error(), StatusError)
+		m, cmd := setStatus(m,"Set failed: "+msg.Err.Error(), StatusError)
 		return m, cmd
 
 	case overlays.ImportDoneMsg:
 		m.activeOverlay = OverlayNone
-		cmd := m.setStatus(fmt.Sprintf("Imported %d keys into %s", msg.Count, msg.File), StatusSuccess)
+		m, cmd := setStatus(m,fmt.Sprintf("Imported %d keys into %s", msg.Count, msg.File), StatusSuccess)
 		return m, tea.Batch(cmd, m.loadKeys(msg.File))
 
 	case overlays.ImportErrorMsg:
-		cmd := m.setStatus("Import failed: "+msg.Err.Error(), StatusError)
+		m, cmd := setStatus(m,"Import failed: "+msg.Err.Error(), StatusError)
 		return m, cmd
 
 	case overlays.ExportDoneMsg:
 		m.activeOverlay = OverlayNone
-		cmd := m.setStatus(fmt.Sprintf("Copied %d key-value pairs to clipboard", msg.Count), StatusSuccess)
+		m, cmd := setStatus(m,fmt.Sprintf("Copied %d key-value pairs to clipboard", msg.Count), StatusSuccess)
 		return m, cmd
 
 	case overlays.ExportErrorMsg:
-		cmd := m.setStatus("Export failed: "+msg.Err.Error(), StatusError)
+		m, cmd := setStatus(m,"Export failed: "+msg.Err.Error(), StatusError)
 		return m, cmd
 	}
 
@@ -516,5 +519,5 @@ func formatCount(n int, noun string) string {
 	if n == 1 {
 		return "1 " + noun
 	}
-	return string(rune('0'+n)) + " " + noun + "s"
+	return fmt.Sprintf("%d %ss", n, noun)
 }

@@ -41,8 +41,6 @@ type FilesDiscoveredMsg struct{ Files []dotenvx.EnvFile }
 type DiscoveryErrorMsg struct{ Err error }
 
 // Panel cascade messages.
-type ScopeSelectedMsg struct{ Scope string }
-type EnvSelectedMsg struct{ Env string }
 type KeysLoadedMsg struct{ Keys []string }
 type KeysLoadErrorMsg struct{ Err error }
 
@@ -54,7 +52,6 @@ type ValueLoadedMsg struct {
 type ValueLoadErrorMsg struct{ Err error }
 
 // Action messages.
-type SetCompleteMsg struct{ Key, File string }
 type SetErrorMsg struct{ Err error }
 type CopyCompleteMsg struct{ Key string }
 type CopyMultiCompleteMsg struct{ Count int }
