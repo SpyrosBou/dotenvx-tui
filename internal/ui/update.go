@@ -275,9 +275,11 @@ func (m Model) handleSelect() (tea.Model, tea.Cmd) {
 	switch m.focusedPanel {
 	case PanelScopes:
 		m.scopePanel.Select()
+		m.focusedPanel = PanelEnvs // advance to envs panel
 		return m.selectScope(m.scopePanel.SelectedItem())
 	case PanelEnvs:
 		m.envPanel.Select()
+		m.focusedPanel = PanelKeys // advance to keys panel
 		return m.selectEnv(m.envPanel.SelectedItem())
 	case PanelKeys:
 		// Toggle preview reveal
