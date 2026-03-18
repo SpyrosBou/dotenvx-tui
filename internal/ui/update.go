@@ -134,10 +134,7 @@ func (m Model) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 	switch {
 	case key.Matches(msg, km.Quit):
-		// Clear any secrets before quitting
-		if m.previewValue != nil {
-			m.previewValue.Clear()
-		}
+		m.cleanup()
 		return m, tea.Quit
 
 	case key.Matches(msg, km.NextPanel):
@@ -177,6 +174,12 @@ func (m Model) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.keyPanel.ToggleSelectAll()
 		}
 		return m, nil
+
+	case key.Matches(msg, km.Back):
+		return m.handleBack()
+
+	case key.Matches(msg, km.Get):
+		return m.handleGet()
 
 	case key.Matches(msg, km.Help):
 		m.activeOverlay = OverlayHelp
@@ -230,6 +233,37 @@ func (m Model) handleCursorDown() (tea.Model, tea.Cmd) {
 		if curKey != "" && curKey != m.previewKey {
 			return m, m.loadValue(m.currentFile(), curKey)
 		}
+	}
+	return m, nil
+}
+
+func (m Model) handleBack() (tea.Model, tea.Cmd) {
+	// Esc in browse mode: move focus back one panel, or clear selection
+	if m.keyPanel.SelectionCount() > 0 {
+		m.keyPanel.ToggleSelectAll() // clears all
+		return m, nil
+	}
+	if m.focusedPanel > PanelScopes {
+		m.focusedPanel--
+		if m.layout.HideScopes && m.focusedPanel == PanelScopes {
+			m.focusedPanel = PanelEnvs
+		}
+	}
+	return m, nil
+}
+
+func (m Model) handleGet() (tea.Model, tea.Cmd) {
+	if m.focusedPanel != PanelKeys {
+		return m, nil
+	}
+	// Reveal the current key's value in the preview pane
+	curKey := m.keyPanel.CursorItem()
+	if curKey == "" {
+		return m, nil
+	}
+	m.previewShown = true
+	if curKey != m.previewKey {
+		return m, m.loadValue(m.currentFile(), curKey)
 	}
 	return m, nil
 }

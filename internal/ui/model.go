@@ -173,3 +173,12 @@ func (m Model) currentFile() string {
 	}
 	return f.Path
 }
+
+// cleanup zeroes all sensitive data before shutdown.
+func (m *Model) cleanup() {
+	if m.previewValue != nil {
+		m.previewValue.Clear()
+		m.previewValue = nil
+	}
+	m.setOverlay.Close()
+}
