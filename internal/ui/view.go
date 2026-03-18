@@ -137,7 +137,7 @@ func (m Model) renderStatusBar() string {
 func (m Model) renderHelpBar() string {
 	var parts []string
 	if m.focusedPanel == PanelKeys {
-		parts = []string{"s:set", "g:get", "d:diff", "i:import", "e:export", "c:copy", "space:select", "?:help", "q:quit"}
+		parts = []string{"enter:reveal", "s:set", "d:diff", "i:import", "e:export", "c:copy", "space:select", "?:help", "q:quit"}
 	} else {
 		parts = []string{"tab:panels", "enter:select", "?:help", "q:quit"}
 	}
@@ -209,7 +209,6 @@ func (m Model) renderHelpOverlay() string {
 		"",
 		"Actions",
 		"  s                  Set value for key",
-		"  g                  Get (decrypt) value",
 		"  d                  Diff environments",
 		"  i                  Import from file",
 		"  e                  Export keys",

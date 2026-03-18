@@ -13,7 +13,6 @@ type KeyMap struct {
 	ToggleSel  key.Binding
 	SelectAll  key.Binding
 	Set        key.Binding
-	Get        key.Binding
 	Diff       key.Binding
 	Import     key.Binding
 	Export     key.Binding
@@ -60,10 +59,6 @@ func DefaultKeyMap() KeyMap {
 		Set: key.NewBinding(
 			key.WithKeys("s"),
 			key.WithHelp("s", "set"),
-		),
-		Get: key.NewBinding(
-			key.WithKeys("g"),
-			key.WithHelp("g", "get"),
 		),
 		Diff: key.NewBinding(
 			key.WithKeys("d"),

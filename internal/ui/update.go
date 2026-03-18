@@ -181,9 +181,6 @@ func (m Model) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, km.Back):
 		return m.handleBack()
 
-	case key.Matches(msg, km.Get):
-		return m.handleGet()
-
 	case key.Matches(msg, km.Help):
 		m.activeOverlay = OverlayHelp
 		return m, nil
@@ -251,22 +248,6 @@ func (m Model) handleBack() (tea.Model, tea.Cmd) {
 		if m.layout.HideScopes && m.focusedPanel == PanelScopes {
 			m.focusedPanel = PanelEnvs
 		}
-	}
-	return m, nil
-}
-
-func (m Model) handleGet() (tea.Model, tea.Cmd) {
-	if m.focusedPanel != PanelKeys {
-		return m, nil
-	}
-	// Reveal the current key's value in the preview pane
-	curKey := m.keyPanel.CursorItem()
-	if curKey == "" {
-		return m, nil
-	}
-	m.previewShown = true
-	if curKey != m.previewKey {
-		return m, m.loadValue(m.currentFile(), curKey)
 	}
 	return m, nil
 }
