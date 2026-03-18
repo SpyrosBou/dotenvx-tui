@@ -37,12 +37,12 @@ func DefaultKeyMap() KeyMap {
 			key.WithHelp("↓/j", "down"),
 		),
 		NextPanel: key.NewBinding(
-			key.WithKeys("tab", "l"),
-			key.WithHelp("tab", "next panel"),
+			key.WithKeys("tab", "l", "right"),
+			key.WithHelp("→/tab", "next panel"),
 		),
 		PrevPanel: key.NewBinding(
-			key.WithKeys("shift+tab", "h"),
-			key.WithHelp("shift+tab", "prev panel"),
+			key.WithKeys("shift+tab", "h", "left"),
+			key.WithHelp("←/shift+tab", "prev panel"),
 		),
 		Select: key.NewBinding(
 			key.WithKeys("enter"),
