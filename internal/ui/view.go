@@ -71,6 +71,13 @@ func (m Model) renderMain() string {
 }
 
 func (m Model) renderPanel(content, title string, focused bool, width, height int) string {
+	// Hard clip content to panel height so it never overflows the border
+	lines := strings.Split(content, "\n")
+	maxLines := height - 1 // title takes 1 line
+	if maxLines > 0 && len(lines) > maxLines {
+		lines = lines[:maxLines]
+		content = strings.Join(lines, "\n")
+	}
 	style := theme.PanelStyle(m.theme, focused, width-2, height) // -2 for border
 	return style.Render(title + "\n" + content)
 }
