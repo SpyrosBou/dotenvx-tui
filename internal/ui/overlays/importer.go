@@ -96,10 +96,6 @@ func (o *ImportOverlay) Update(msg tea.Msg) (tea.Cmd, bool) {
 		o.Step = ImportStepSelectKeys
 		return nil, true
 
-	case ImportDoneMsg:
-		o.Close()
-		return nil, true
-
 	case tea.KeyPressMsg:
 		switch {
 		case key.Matches(msg, key.NewBinding(key.WithKeys("escape"))):

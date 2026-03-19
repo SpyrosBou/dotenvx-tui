@@ -22,6 +22,54 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	// Handle overlay result messages regardless of overlay state.
+	// These arrive asynchronously after the overlay may have already closed.
+	switch msg := msg.(type) {
+	case overlays.SetDoneMsg:
+		m.setOverlay.Close()
+		m.activeOverlay = OverlayNone
+		m, cmd := setStatus(m, "Set "+msg.Key+" in "+msg.File, StatusSuccess)
+		return m, tea.Batch(cmd, m.loadKeys(msg.File))
+
+	case overlays.SetErrorMsg:
+		m.activeOverlay = OverlayNone
+		m, cmd := setStatus(m, "Set failed: "+msg.Err.Error(), StatusError)
+		return m, cmd
+
+	case overlays.ImportDoneMsg:
+		m.importOverlay.Close()
+		m.activeOverlay = OverlayNone
+		m, cmd := setStatus(m, fmt.Sprintf("Imported %d keys into %s", msg.Count, msg.File), StatusSuccess)
+		return m, tea.Batch(cmd, m.loadKeys(msg.File))
+
+	case overlays.ImportErrorMsg:
+		m.activeOverlay = OverlayNone
+		m, cmd := setStatus(m, "Import failed: "+msg.Err.Error(), StatusError)
+		return m, cmd
+
+	case overlays.ExportDoneMsg:
+		m.exportOverlay.Close()
+		m.activeOverlay = OverlayNone
+		m, cmd := setStatus(m, fmt.Sprintf("Copied %d key-value pairs to clipboard", msg.Count), StatusSuccess)
+		return m, cmd
+
+	case overlays.ExportErrorMsg:
+		m.activeOverlay = OverlayNone
+		m, cmd := setStatus(m, "Export failed: "+msg.Err.Error(), StatusError)
+		return m, cmd
+
+	case overlays.DeleteDoneMsg:
+		m.deleteOverlay.Close()
+		m.activeOverlay = OverlayNone
+		m, cmd := setStatus(m, fmt.Sprintf("Deleted %s from %s", formatCount(len(msg.Keys), "key"), msg.File), StatusSuccess)
+		return m, tea.Batch(cmd, m.loadKeys(msg.File))
+
+	case overlays.DeleteErrorMsg:
+		m.activeOverlay = OverlayNone
+		m, cmd := setStatus(m, "Delete failed: "+msg.Err.Error(), StatusError)
+		return m, cmd
+	}
+
 	// Handle overlay input first if an overlay is active
 	if m.activeOverlay != OverlayNone {
 		return m.updateOverlay(msg)
@@ -498,45 +546,6 @@ func (m Model) updateOverlay(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 		}
-	}
-
-	// Handle overlay result messages globally
-	switch msg := msg.(type) {
-	case overlays.SetDoneMsg:
-		m.activeOverlay = OverlayNone
-		m, cmd := setStatus(m,"Set "+msg.Key+" in "+msg.File, StatusSuccess)
-		return m, tea.Batch(cmd, m.loadKeys(msg.File))
-
-	case overlays.SetErrorMsg:
-		m, cmd := setStatus(m,"Set failed: "+msg.Err.Error(), StatusError)
-		return m, cmd
-
-	case overlays.ImportDoneMsg:
-		m.activeOverlay = OverlayNone
-		m, cmd := setStatus(m,fmt.Sprintf("Imported %d keys into %s", msg.Count, msg.File), StatusSuccess)
-		return m, tea.Batch(cmd, m.loadKeys(msg.File))
-
-	case overlays.ImportErrorMsg:
-		m, cmd := setStatus(m,"Import failed: "+msg.Err.Error(), StatusError)
-		return m, cmd
-
-	case overlays.ExportDoneMsg:
-		m.activeOverlay = OverlayNone
-		m, cmd := setStatus(m,fmt.Sprintf("Copied %d key-value pairs to clipboard", msg.Count), StatusSuccess)
-		return m, cmd
-
-	case overlays.ExportErrorMsg:
-		m, cmd := setStatus(m,"Export failed: "+msg.Err.Error(), StatusError)
-		return m, cmd
-
-	case overlays.DeleteDoneMsg:
-		m.activeOverlay = OverlayNone
-		m, cmd := setStatus(m,fmt.Sprintf("Deleted %s from %s", formatCount(len(msg.Keys), "key"), msg.File), StatusSuccess)
-		return m, tea.Batch(cmd, m.loadKeys(msg.File))
-
-	case overlays.DeleteErrorMsg:
-		m, cmd := setStatus(m,"Delete failed: "+msg.Err.Error(), StatusError)
-		return m, cmd
 	}
 
 	return m, nil

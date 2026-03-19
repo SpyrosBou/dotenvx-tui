@@ -52,10 +52,6 @@ func (o *ExportOverlay) Update(msg tea.Msg) (tea.Cmd, bool) {
 	}
 
 	switch msg := msg.(type) {
-	case ExportDoneMsg:
-		o.Close()
-		return nil, true
-
 	case tea.KeyPressMsg:
 		switch {
 		case key.Matches(msg, key.NewBinding(key.WithKeys("escape"))):
