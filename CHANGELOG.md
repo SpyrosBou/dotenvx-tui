@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.0] - 2026-03-19
+
+### Added
+- Create new variables with `n` keybinding (opens set overlay in new-key mode)
+- Delete variables with `x` keybinding (decrypt, remove, re-encrypt with confirmation)
+- Multi-select delete support (select keys with space, then `x` to delete all)
+
+### Fixed
+- Pressing `q` during text input in overlays no longer quits the app
+- Import overlay now steps back from key selection to file picker on escape
+- Escape in Keys panel hides revealed preview before moving focus
+
 ## [2.0.0] - 2026-03-17
 
 Complete rewrite from bash script to full-screen Go TUI.
