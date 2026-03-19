@@ -137,7 +137,7 @@ func (m Model) renderStatusBar() string {
 func (m Model) renderHelpBar() string {
 	var parts []string
 	if m.focusedPanel == PanelKeys {
-		parts = []string{"enter:reveal", "s:set", "d:diff", "i:import", "e:export", "c:copy", "space:select", "?:help", "q:quit"}
+		parts = []string{"enter:reveal", "n:new", "s:set", "x:delete", "d:diff", "i:import", "e:export", "c:copy", "space:select", "?:help", "q:quit"}
 	} else {
 		parts = []string{"tab:panels", "enter:select", "?:help", "q:quit"}
 	}
@@ -185,6 +185,8 @@ func (m Model) renderOverlayOnTop(bg string) string {
 		overlayContent = m.importOverlay.View(m.width)
 	case OverlayExport:
 		overlayContent = m.exportOverlay.View(m.width)
+	case OverlayDelete:
+		overlayContent = m.deleteOverlay.View(m.width)
 	default:
 		overlayContent = m.styles.Overlay.
 			Width(min(50, m.width-4)).
@@ -208,7 +210,9 @@ func (m Model) renderHelpOverlay() string {
 		"  a                  Select all / none",
 		"",
 		"Actions",
+		"  n                  New variable",
 		"  s                  Set value for key",
+		"  x                  Delete variable(s)",
 		"  d                  Diff environments",
 		"  i                  Import from file",
 		"  e                  Export keys",

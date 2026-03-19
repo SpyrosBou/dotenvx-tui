@@ -56,6 +56,7 @@ type Model struct {
 	diffOverlay    overlays.DiffOverlay
 	importOverlay  overlays.ImportOverlay
 	exportOverlay  overlays.ExportOverlay
+	deleteOverlay  overlays.DeleteOverlay
 
 	// Key bindings
 	keyMap KeyMap
@@ -87,6 +88,7 @@ func NewModel(targetDir string) Model {
 		diffOverlay:   overlays.NewDiffOverlay(styles),
 		importOverlay: overlays.NewImportOverlay(styles),
 		exportOverlay: overlays.NewExportOverlay(styles),
+		deleteOverlay: overlays.NewDeleteOverlay(styles),
 	}
 }
 

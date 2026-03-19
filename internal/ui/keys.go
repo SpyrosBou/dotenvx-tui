@@ -17,6 +17,8 @@ type KeyMap struct {
 	Import     key.Binding
 	Export     key.Binding
 	Copy       key.Binding
+	New        key.Binding
+	Delete     key.Binding
 	Help       key.Binding
 	Back       key.Binding
 }
@@ -75,6 +77,14 @@ func DefaultKeyMap() KeyMap {
 		Copy: key.NewBinding(
 			key.WithKeys("c"),
 			key.WithHelp("c", "copy"),
+		),
+		New: key.NewBinding(
+			key.WithKeys("n"),
+			key.WithHelp("n", "new"),
+		),
+		Delete: key.NewBinding(
+			key.WithKeys("x"),
+			key.WithHelp("x", "delete"),
 		),
 		Help: key.NewBinding(
 			key.WithKeys("?"),

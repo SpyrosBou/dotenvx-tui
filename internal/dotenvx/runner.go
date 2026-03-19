@@ -136,6 +136,101 @@ func (r *Runner) Set(ctx context.Context, file, key string, value []byte) error 
 	return nil
 }
 
+// Unset removes one or more keys from an encrypted env file.
+// It decrypts the file, removes matching lines, then re-encrypts.
+func (r *Runner) Unset(ctx context.Context, file string, keys []string) error {
+	if len(keys) == 0 {
+		return nil
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
+	defer cancel()
+
+	// Step 1: Decrypt the file in-place
+	if err := r.runCmd(ctx, "decrypt", "-f", file); err != nil {
+		return fmt.Errorf("decrypt failed: %w", err)
+	}
+
+	// From this point, if anything fails we must try to re-encrypt
+	reencrypt := func() {
+		reCtx, reCancel := context.WithTimeout(context.Background(), defaultTimeout)
+		defer reCancel()
+		_ = r.runCmd(reCtx, "encrypt", "-f", file)
+	}
+
+	// Step 2: Read the plaintext file
+	filePath := file
+	if !strings.HasPrefix(filePath, "/") {
+		filePath = r.workDir + "/" + filePath
+	}
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		reencrypt()
+		return fmt.Errorf("read decrypted file failed: %w", err)
+	}
+
+	// Build key lookup set
+	keySet := make(map[string]struct{}, len(keys))
+	for _, k := range keys {
+		keySet[k] = struct{}{}
+	}
+
+	// Step 3: Remove lines matching any key
+	lines := strings.Split(string(data), "\n")
+	var kept []string
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			kept = append(kept, line)
+			continue
+		}
+		eqIdx := strings.Index(trimmed, "=")
+		if eqIdx < 0 {
+			kept = append(kept, line)
+			continue
+		}
+		lineKey := strings.TrimSpace(trimmed[:eqIdx])
+		if _, found := keySet[lineKey]; found {
+			continue // skip this line
+		}
+		kept = append(kept, line)
+	}
+
+	// Zero the original buffer
+	for i := range data {
+		data[i] = 0
+	}
+
+	// Step 4: Write modified file
+	output := strings.Join(kept, "\n")
+	if err := os.WriteFile(filePath, []byte(output), 0644); err != nil {
+		reencrypt()
+		return fmt.Errorf("write modified file failed: %w", err)
+	}
+
+	// Step 5: Re-encrypt
+	if err := r.runCmd(ctx, "encrypt", "-f", file); err != nil {
+		return fmt.Errorf("re-encrypt failed: %w", err)
+	}
+
+	return nil
+}
+
+// runCmd executes a dotenvx subcommand with the given arguments.
+func (r *Runner) runCmd(ctx context.Context, args ...string) error {
+	cmd := exec.CommandContext(ctx, r.binary, args...)
+	cmd.Dir = r.workDir
+	cmd.Env = minimalEnv()
+
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%s", strings.TrimSpace(stderr.String()))
+	}
+	return nil
+}
+
 // minimalEnv returns a minimal set of environment variables for subprocesses.
 // This prevents leaking the parent process's full environment.
 func minimalEnv() []string {

@@ -23,6 +23,7 @@ const (
 	OverlayDiff
 	OverlayImport
 	OverlayExport
+	OverlayDelete
 	OverlayHelp
 )
 
