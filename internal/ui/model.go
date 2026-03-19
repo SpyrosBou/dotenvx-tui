@@ -2,6 +2,9 @@ package ui
 
 import (
 	"context"
+	"io/fs"
+	"path/filepath"
+	"sort"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -10,6 +13,7 @@ import (
 	"github.com/warui1/dotenvx-tui/internal/theme"
 	"github.com/warui1/dotenvx-tui/internal/ui/overlays"
 	"github.com/warui1/dotenvx-tui/internal/ui/panels"
+	"github.com/warui1/dotenvx-tui/internal/watcher"
 )
 
 // Model is the root Bubbletea model for the application.
@@ -41,9 +45,10 @@ type Model struct {
 	focusedPanel PanelID
 
 	// Preview
-	previewKey   string
-	previewValue *secret.SecureBytes
-	previewShown bool // true = revealed, false = masked
+	previewKey    string
+	previewValue  *secret.SecureBytes
+	previewShown  bool // true = revealed, false = masked
+	previewMaskID int
 
 	// Status
 	statusMsg   string
@@ -51,18 +56,21 @@ type Model struct {
 	statusID    int
 
 	// Overlays
-	activeOverlay  OverlayKind
-	setOverlay     overlays.SetValueOverlay
-	diffOverlay    overlays.DiffOverlay
-	importOverlay  overlays.ImportOverlay
-	exportOverlay  overlays.ExportOverlay
-	deleteOverlay  overlays.DeleteOverlay
+	activeOverlay OverlayKind
+	setOverlay    overlays.SetValueOverlay
+	diffOverlay   overlays.DiffOverlay
+	importOverlay overlays.ImportOverlay
+	exportOverlay overlays.ExportOverlay
+	deleteOverlay overlays.DeleteOverlay
 
 	// Key bindings
 	keyMap KeyMap
 
 	// Runner
 	runner *dotenvx.Runner
+
+	// File watching
+	fileWatcher *watcher.Watcher
 
 	// Loading state
 	loading    bool
@@ -167,5 +175,59 @@ func (m *Model) cleanup() {
 		m.previewValue.Clear()
 		m.previewValue = nil
 	}
+	if m.fileWatcher != nil {
+		_ = m.fileWatcher.Close()
+		m.fileWatcher = nil
+	}
 	m.setOverlay.Close()
+}
+
+func (m Model) watchDirs() []string {
+	dirs := make(map[string]struct{})
+	add := func(dir string) {
+		if dir == "" {
+			return
+		}
+		dirs[filepath.Clean(dir)] = struct{}{}
+	}
+
+	add(m.targetDir)
+	_ = filepath.WalkDir(m.targetDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			name := d.Name()
+			if name == "node_modules" || name == ".git" || name == "vendor" {
+				return filepath.SkipDir
+			}
+			add(path)
+		}
+		return nil
+	})
+
+	out := make([]string, 0, len(dirs))
+	for dir := range dirs {
+		out = append(out, dir)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func (m Model) startFileWatcher() (Model, tea.Cmd, error) {
+	dirs := m.watchDirs()
+	if len(dirs) == 0 {
+		return m, nil, nil
+	}
+
+	fileWatcher, cmd, err := watcher.StartWatching(dirs)
+	if err != nil {
+		return m, nil, err
+	}
+
+	if m.fileWatcher != nil {
+		_ = m.fileWatcher.Close()
+	}
+	m.fileWatcher = fileWatcher
+	return m, cmd, nil
 }

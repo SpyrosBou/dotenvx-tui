@@ -57,11 +57,8 @@ type SetErrorMsg struct{ Err error }
 type CopyCompleteMsg struct{ Key string }
 type CopyMultiCompleteMsg struct{ Count int }
 
-// File watching.
-type FileChangedMsg struct{ Path string }
-
 // Status.
 type ClearStatusMsg struct{ ID int }
 
 // Auto-mask timer.
-type AutoMaskMsg struct{}
+type AutoMaskMsg struct{ ID int }

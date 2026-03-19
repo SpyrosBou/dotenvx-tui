@@ -3,13 +3,15 @@ package ui
 import (
 	"context"
 	"fmt"
+	"time"
 
-	tea "charm.land/bubbletea/v2"
 	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 	clip "github.com/warui1/dotenvx-tui/internal/clipboard"
 	"github.com/warui1/dotenvx-tui/internal/dotenvx"
 	"github.com/warui1/dotenvx-tui/internal/theme"
 	"github.com/warui1/dotenvx-tui/internal/ui/overlays"
+	"github.com/warui1/dotenvx-tui/internal/watcher"
 )
 
 // Update handles all messages and updates the model.
@@ -68,6 +70,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.activeOverlay = OverlayNone
 		m, cmd := setStatus(m, "Delete failed: "+msg.Err.Error(), StatusError)
 		return m, cmd
+
+	case watcher.FileChangedMsg:
+		m.loading = true
+		m.loadingMsg = "Refreshing files..."
+		if m.fileWatcher != nil {
+			return m, tea.Batch(m.discoverFiles(), m.fileWatcher.Cmd())
+		}
+		return m, m.discoverFiles()
 	}
 
 	// Handle overlay input first if an overlay is active
@@ -107,7 +117,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case KeysLoadErrorMsg:
 		m.loading = false
-		m, cmd := setStatus(m,"Failed to load keys: "+msg.Err.Error(), StatusError)
+		m, cmd := setStatus(m, "Failed to load keys: "+msg.Err.Error(), StatusError)
 		return m, cmd
 
 	case ValueLoadedMsg:
@@ -118,22 +128,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.previewKey = msg.Key
 		m.previewValue = msg.Value
 		m.previewShown = false
+		m.previewMaskID++
 		return m, nil
 
 	case ValueLoadErrorMsg:
-		m, cmd := setStatus(m,"Failed to decrypt: "+msg.Err.Error(), StatusError)
+		m.previewKey = ""
+		m.previewShown = false
+		m, cmd := setStatus(m, "Failed to decrypt: "+msg.Err.Error(), StatusError)
 		return m, cmd
 
 	case SetErrorMsg:
-		m, cmd := setStatus(m,"Set failed: "+msg.Err.Error(), StatusError)
+		m, cmd := setStatus(m, "Set failed: "+msg.Err.Error(), StatusError)
 		return m, cmd
 
 	case CopyCompleteMsg:
-		m, cmd := setStatus(m,"Copied "+msg.Key+" to clipboard", StatusSuccess)
+		m, cmd := setStatus(m, "Copied "+msg.Key+" to clipboard", StatusSuccess)
 		return m, cmd
 
 	case CopyMultiCompleteMsg:
-		m, cmd := setStatus(m,formatCount(msg.Count, "value")+" copied to clipboard", StatusSuccess)
+		m, cmd := setStatus(m, formatCount(msg.Count, "value")+" copied to clipboard", StatusSuccess)
 		return m, cmd
 
 	case ClearStatusMsg:
@@ -143,7 +156,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case AutoMaskMsg:
-		m.previewShown = false
+		if msg.ID == m.previewMaskID {
+			m.previewShown = false
+		}
 		return m, nil
 
 	case tea.KeyPressMsg:
@@ -161,6 +176,15 @@ func (m Model) handleFilesDiscovered(msg FilesDiscoveredMsg) (tea.Model, tea.Cmd
 	m.scopePanel.Cursor = 0
 	m.scopePanel.Selected = 0
 
+	// Clear stale preview data when the filesystem snapshot changes.
+	if m.previewValue != nil {
+		m.previewValue.Clear()
+		m.previewValue = nil
+	}
+	m.previewKey = ""
+	m.previewShown = false
+	m.previewMaskID++
+
 	// Try to init runner
 	runner, err := dotenvx.NewRunner(m.targetDir)
 	if err != nil {
@@ -173,11 +197,26 @@ func (m Model) handleFilesDiscovered(msg FilesDiscoveredMsg) (tea.Model, tea.Cmd
 	m.layout = ComputeLayout(m.width, m.height, len(scopes))
 	m.updatePanelSizes()
 
+	watchModel, watchCmd, watchErr := m.startFileWatcher()
+	m = watchModel
+
 	// If we have scopes, populate envs for first scope
 	if len(scopes) > 0 {
-		return m.selectScope(scopes[0])
+		nextModel, cmd := m.selectScope(scopes[0])
+		next := nextModel.(Model)
+		if watchErr != nil {
+			warn, warnCmd := setStatus(next, "Live refresh unavailable: "+watchErr.Error(), StatusWarning)
+			return warn, tea.Batch(cmd, warnCmd)
+		}
+		return next, tea.Batch(cmd, watchCmd)
 	}
-	return m, nil
+
+	m.loading = false
+	if watchErr != nil {
+		warn, warnCmd := setStatus(m, "Live refresh unavailable: "+watchErr.Error(), StatusWarning)
+		return warn, tea.Batch(warnCmd, watchCmd)
+	}
+	return m, watchCmd
 }
 
 func (m Model) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
@@ -269,6 +308,13 @@ func (m Model) handleCursorUp() (tea.Model, tea.Cmd) {
 		// Update preview for new cursor position
 		curKey := m.keyPanel.CursorItem()
 		if curKey != "" && curKey != m.previewKey {
+			if m.previewValue != nil {
+				m.previewValue.Clear()
+				m.previewValue = nil
+			}
+			m.previewKey = curKey
+			m.previewShown = false
+			m.previewMaskID++
 			return m, m.loadValue(m.currentFile(), curKey)
 		}
 	}
@@ -285,6 +331,13 @@ func (m Model) handleCursorDown() (tea.Model, tea.Cmd) {
 		m.keyPanel.CursorDown()
 		curKey := m.keyPanel.CursorItem()
 		if curKey != "" && curKey != m.previewKey {
+			if m.previewValue != nil {
+				m.previewValue.Clear()
+				m.previewValue = nil
+			}
+			m.previewKey = curKey
+			m.previewShown = false
+			m.previewMaskID++
 			return m, m.loadValue(m.currentFile(), curKey)
 		}
 	}
@@ -295,6 +348,7 @@ func (m Model) handleBack() (tea.Model, tea.Cmd) {
 	// Esc priority: hide preview → clear selection → move panel focus back
 	if m.focusedPanel == PanelKeys && m.previewShown {
 		m.previewShown = false
+		m.previewMaskID++
 		return m, nil
 	}
 	if m.keyPanel.SelectionCount() > 0 {
@@ -321,8 +375,18 @@ func (m Model) handleSelect() (tea.Model, tea.Cmd) {
 		m.focusedPanel = PanelKeys // advance to keys panel
 		return m.selectEnv(m.envPanel.SelectedItem())
 	case PanelKeys:
-		// Toggle preview reveal
+		// Toggle preview reveal.
+		if m.previewValue == nil {
+			return m, nil
+		}
 		m.previewShown = !m.previewShown
+		m.previewMaskID++
+		if m.previewShown {
+			id := m.previewMaskID
+			return m, tea.Tick(30*time.Second, func(time.Time) tea.Msg {
+				return AutoMaskMsg{ID: id}
+			})
+		}
 		return m, nil
 	}
 	return m, nil
@@ -352,6 +416,8 @@ func (m Model) selectEnv(_ string) (tea.Model, tea.Cmd) {
 		m.previewValue = nil
 	}
 	m.previewKey = ""
+	m.previewShown = false
+	m.previewMaskID++
 	return m, m.loadKeys(file)
 }
 
@@ -458,7 +524,7 @@ func (m Model) openDiffOverlay() (tea.Model, tea.Cmd) {
 	env := m.envPanel.SelectedItem()
 	envs := dotenvx.EnvsForScope(m.envFiles, scope)
 	if len(envs) < 2 {
-		m, cmd := setStatus(m,"Need at least 2 environments to diff", StatusWarning)
+		m, cmd := setStatus(m, "Need at least 2 environments to diff", StatusWarning)
 		return m, cmd
 	}
 	m.activeOverlay = OverlayDiff

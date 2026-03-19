@@ -194,7 +194,16 @@ func (m Model) renderOverlayOnTop(bg string) string {
 				m.styles.HelpBar.Render("Press esc to close"))
 	}
 
-	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, overlayContent)
+	canvas := lipgloss.NewCanvas(m.width, m.height)
+	compositor := lipgloss.NewCompositor(
+		lipgloss.NewLayer(bg).X(0).Y(0).Z(0),
+		lipgloss.NewLayer(overlayContent).
+			X(max(0, (m.width-lipgloss.Width(overlayContent))/2)).
+			Y(max(0, (m.height-lipgloss.Height(overlayContent))/2)).
+			Z(1),
+	)
+	canvas.Compose(compositor)
+	return canvas.Render()
 }
 
 func (m Model) renderHelpOverlay() string {

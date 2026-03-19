@@ -10,6 +10,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/warui1/dotenvx-tui/internal/validate"
 )
 
 const defaultTimeout = 30 * time.Second
@@ -31,6 +33,10 @@ func NewRunner(workDir string) (*Runner, error) {
 
 // GetKeys returns the sorted key names (excluding DOTENV_PUBLIC_KEY) from an encrypted env file.
 func (r *Runner) GetKeys(ctx context.Context, file string) ([]string, error) {
+	if err := validate.FilePath(r.workDir, file); err != nil {
+		return nil, err
+	}
+
 	kv, err := r.GetAll(ctx, file)
 	if err != nil {
 		return nil, err
@@ -47,6 +53,10 @@ func (r *Runner) GetKeys(ctx context.Context, file string) ([]string, error) {
 // GetValue decrypts and returns the raw bytes of a single key.
 // The caller should wrap the result in secret.SecureBytes immediately.
 func (r *Runner) GetValue(ctx context.Context, file, key string) ([]byte, error) {
+	if err := validate.FilePath(r.workDir, file); err != nil {
+		return nil, err
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
 	defer cancel()
 
@@ -78,6 +88,10 @@ func (r *Runner) GetValue(ctx context.Context, file, key string) ([]byte, error)
 // Returns a map of key names to raw byte values. DOTENV_PUBLIC_KEY is excluded.
 // The caller should wrap values in secret.SecureBytes and zero the map values after use.
 func (r *Runner) GetAll(ctx context.Context, file string) (map[string][]byte, error) {
+	if err := validate.FilePath(r.workDir, file); err != nil {
+		return nil, err
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
 	defer cancel()
 
@@ -120,6 +134,10 @@ func (r *Runner) GetAll(ctx context.Context, file string) (map[string][]byte, er
 
 // Set encrypts and stores a value in an env file.
 func (r *Runner) Set(ctx context.Context, file, key string, value []byte) error {
+	if err := validate.FilePath(r.workDir, file); err != nil {
+		return err
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
 	defer cancel()
 
@@ -141,6 +159,9 @@ func (r *Runner) Set(ctx context.Context, file, key string, value []byte) error 
 func (r *Runner) Unset(ctx context.Context, file string, keys []string) error {
 	if len(keys) == 0 {
 		return nil
+	}
+	if err := validate.FilePath(r.workDir, file); err != nil {
+		return err
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
