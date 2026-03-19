@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.1] - 2026-03-19
+
+### Fixed
+- Live file watching now refreshes the workspace when `.env` files change.
+- Revealed values auto-mask again after 30 seconds and reset cleanly on navigation.
+- Path validation now runs before every `dotenvx` file operation.
+- The npm launcher now downloads release binaries from the correct repository.
+- `make build-all` creates `dist/` before writing cross-compiled binaries.
+
 ## [2.1.0] - 2026-03-19
 
 ### Added

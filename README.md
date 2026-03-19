@@ -1,6 +1,6 @@
 # dotenvx-tui
 
-> v2.0.0 | [Changelog](CHANGELOG.md)
+> v2.1.1 | [Changelog](CHANGELOG.md)
 
 Full-screen terminal UI for managing [dotenvx](https://dotenvx.com)-encrypted environment variables.
 
