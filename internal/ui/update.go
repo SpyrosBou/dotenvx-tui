@@ -16,7 +16,7 @@ import (
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// ctrl+c always quits, even with overlays open
 	if kmsg, ok := msg.(tea.KeyPressMsg); ok {
-		if key.Matches(kmsg, m.keyMap.Quit) {
+		if key.Matches(kmsg, key.NewBinding(key.WithKeys("ctrl+c"))) {
 			m.cleanup()
 			return m, tea.Quit
 		}
@@ -188,6 +188,12 @@ func (m Model) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, km.Copy):
 		return m.handleCopy()
 
+	case key.Matches(msg, km.New):
+		return m.openNewKeyOverlay()
+
+	case key.Matches(msg, km.Delete):
+		return m.openDeleteOverlay()
+
 	case key.Matches(msg, km.Set):
 		return m.openSetOverlay()
 
@@ -238,7 +244,11 @@ func (m Model) handleCursorDown() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleBack() (tea.Model, tea.Cmd) {
-	// Esc in browse mode: move focus back one panel, or clear selection
+	// Esc priority: hide preview → clear selection → move panel focus back
+	if m.focusedPanel == PanelKeys && m.previewShown {
+		m.previewShown = false
+		return m, nil
+	}
 	if m.keyPanel.SelectionCount() > 0 {
 		m.keyPanel.ToggleSelectAll() // clears all
 		return m, nil
@@ -355,6 +365,30 @@ func (m Model) handleCopy() (tea.Model, tea.Cmd) {
 	}
 }
 
+func (m Model) openNewKeyOverlay() (tea.Model, tea.Cmd) {
+	file := m.currentFile()
+	if file == "" || m.runner == nil {
+		return m, nil
+	}
+	m.activeOverlay = OverlaySetValue
+	cmd := m.setOverlay.Open(file, nil, "", m.runner)
+	return m, cmd
+}
+
+func (m Model) openDeleteOverlay() (tea.Model, tea.Cmd) {
+	file := m.currentFile()
+	if file == "" || m.runner == nil {
+		return m, nil
+	}
+	keys := m.keyPanel.SelectedItems()
+	if len(keys) == 0 {
+		return m, nil
+	}
+	m.activeOverlay = OverlayDelete
+	m.deleteOverlay.Open(file, keys, m.runner)
+	return m, nil
+}
+
 func (m Model) openSetOverlay() (tea.Model, tea.Cmd) {
 	file := m.currentFile()
 	if file == "" || m.runner == nil {
@@ -447,6 +481,16 @@ func (m Model) updateOverlay(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, cmd
 
+	case OverlayDelete:
+		cmd, handled := m.deleteOverlay.Update(msg)
+		if !handled {
+			break
+		}
+		if !m.deleteOverlay.Active {
+			m.activeOverlay = OverlayNone
+		}
+		return m, cmd
+
 	case OverlayHelp:
 		if kmsg, ok := msg.(tea.KeyPressMsg); ok {
 			if key.Matches(kmsg, m.keyMap.Back) || key.Matches(kmsg, m.keyMap.Help) {
@@ -483,6 +527,15 @@ func (m Model) updateOverlay(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case overlays.ExportErrorMsg:
 		m, cmd := setStatus(m,"Export failed: "+msg.Err.Error(), StatusError)
+		return m, cmd
+
+	case overlays.DeleteDoneMsg:
+		m.activeOverlay = OverlayNone
+		m, cmd := setStatus(m,fmt.Sprintf("Deleted %s from %s", formatCount(len(msg.Keys), "key"), msg.File), StatusSuccess)
+		return m, tea.Batch(cmd, m.loadKeys(msg.File))
+
+	case overlays.DeleteErrorMsg:
+		m, cmd := setStatus(m,"Delete failed: "+msg.Err.Error(), StatusError)
 		return m, cmd
 	}
 
