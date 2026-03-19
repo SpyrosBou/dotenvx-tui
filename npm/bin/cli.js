@@ -6,10 +6,11 @@ const path = require("path");
 const fs = require("fs");
 
 const NAME = "dotenvx-tui";
-const REPO = "SpyrosBou/dotenvx-tui";
+const REPO = "warui1/dotenvx-tui";
 const VERSION = require("../package.json").version;
 const binDir = __dirname;
 const binPath = path.join(binDir, NAME);
+const versionPath = `${binPath}.version`;
 
 const PLATFORM_MAP = { darwin: "darwin", linux: "linux" };
 const ARCH_MAP = { x64: "amd64", arm64: "arm64" };
@@ -49,7 +50,12 @@ function downloadFile(url) {
 }
 
 async function ensureBinary() {
-  if (fs.existsSync(binPath)) return;
+  if (fs.existsSync(binPath) && fs.existsSync(versionPath)) {
+    const installedVersion = fs.readFileSync(versionPath, "utf8").trim();
+    if (installedVersion === VERSION) {
+      return;
+    }
+  }
 
   const platform = PLATFORM_MAP[process.platform];
   const arch = ARCH_MAP[process.arch];
@@ -74,6 +80,7 @@ async function ensureBinary() {
     execSync(`tar -xzf "${tmpFile}" -C "${binDir}" "${NAME}"`, { stdio: "ignore" });
     fs.unlinkSync(tmpFile);
     fs.chmodSync(binPath, 0o755);
+    fs.writeFileSync(versionPath, `${VERSION}\n`);
     process.stderr.write(`  ready!\n\n`);
   } catch (err) {
     console.error(
