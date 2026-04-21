@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const { spawn, execSync } = require("child_process");
+const { spawn, execFileSync } = require("child_process");
 const https = require("https");
 const path = require("path");
 const fs = require("fs");
@@ -73,12 +73,12 @@ async function ensureBinary() {
 
   process.stderr.write(`${NAME} v${VERSION} — first run setup\n`);
 
+  let tmpFile = "";
   try {
     const buffer = await downloadFile(url);
-    const tmpFile = path.join(binDir, "_archive.tar.gz");
+    tmpFile = path.join(binDir, `_${NAME}-${process.pid}.tar.gz`);
     fs.writeFileSync(tmpFile, buffer);
-    execSync(`tar -xzf "${tmpFile}" -C "${binDir}" "${NAME}"`, { stdio: "ignore" });
-    fs.unlinkSync(tmpFile);
+    execFileSync("tar", ["-xzf", tmpFile, "-C", binDir, NAME], { stdio: "ignore" });
     fs.chmodSync(binPath, 0o755);
     fs.writeFileSync(versionPath, `${VERSION}\n`);
     process.stderr.write(`  ready!\n\n`);
@@ -90,6 +90,10 @@ async function ensureBinary() {
         `  # or: https://github.com/${REPO}/releases`
     );
     process.exit(1);
+  } finally {
+    if (tmpFile) {
+      fs.rmSync(tmpFile, { force: true });
+    }
   }
 }
 
