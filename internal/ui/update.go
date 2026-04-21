@@ -34,6 +34,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(cmd, m.loadKeys(msg.File))
 
 	case overlays.SetErrorMsg:
+		m.setOverlay.Close()
 		m.activeOverlay = OverlayNone
 		m, cmd := setStatus(m, "Set failed: "+msg.Err.Error(), StatusError)
 		return m, cmd
@@ -45,6 +46,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(cmd, m.loadKeys(msg.File))
 
 	case overlays.ImportErrorMsg:
+		m.importOverlay.Close()
 		m.activeOverlay = OverlayNone
 		m, cmd := setStatus(m, "Import failed: "+msg.Err.Error(), StatusError)
 		return m, cmd
@@ -56,6 +58,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case overlays.ExportErrorMsg:
+		m.exportOverlay.Close()
 		m.activeOverlay = OverlayNone
 		m, cmd := setStatus(m, "Export failed: "+msg.Err.Error(), StatusError)
 		return m, cmd
@@ -67,6 +70,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(cmd, m.loadKeys(msg.File))
 
 	case overlays.DeleteErrorMsg:
+		m.deleteOverlay.Close()
 		m.activeOverlay = OverlayNone
 		m, cmd := setStatus(m, "Delete failed: "+msg.Err.Error(), StatusError)
 		return m, cmd
@@ -121,6 +125,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case ValueLoadedMsg:
+		if msg.Key != m.previewKey {
+			if msg.Value != nil {
+				msg.Value.Clear()
+			}
+			return m, nil
+		}
 		// Clear old preview value
 		if m.previewValue != nil {
 			m.previewValue.Clear()
@@ -132,6 +142,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case ValueLoadErrorMsg:
+		if msg.Key != m.previewKey {
+			return m, nil
+		}
 		m.previewKey = ""
 		m.previewShown = false
 		m, cmd := setStatus(m, "Failed to decrypt: "+msg.Err.Error(), StatusError)
@@ -147,6 +160,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case CopyMultiCompleteMsg:
 		m, cmd := setStatus(m, formatCount(msg.Count, "value")+" copied to clipboard", StatusSuccess)
+		return m, cmd
+
+	case CopyErrorMsg:
+		m, cmd := setStatus(m, "Copy failed: "+msg.Err.Error(), StatusError)
 		return m, cmd
 
 	case ClearStatusMsg:
@@ -275,6 +292,12 @@ func (m Model) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, km.Copy):
 		return m.handleCopy()
 
+	case key.Matches(msg, km.Get):
+		if m.focusedPanel == PanelKeys {
+			return m.togglePreviewReveal()
+		}
+		return m, nil
+
 	case key.Matches(msg, km.New):
 		return m.openNewKeyOverlay()
 
@@ -375,19 +398,22 @@ func (m Model) handleSelect() (tea.Model, tea.Cmd) {
 		m.focusedPanel = PanelKeys // advance to keys panel
 		return m.selectEnv(m.envPanel.SelectedItem())
 	case PanelKeys:
-		// Toggle preview reveal.
-		if m.previewValue == nil {
-			return m, nil
-		}
-		m.previewShown = !m.previewShown
-		m.previewMaskID++
-		if m.previewShown {
-			id := m.previewMaskID
-			return m, tea.Tick(30*time.Second, func(time.Time) tea.Msg {
-				return AutoMaskMsg{ID: id}
-			})
-		}
+		return m.togglePreviewReveal()
+	}
+	return m, nil
+}
+
+func (m Model) togglePreviewReveal() (tea.Model, tea.Cmd) {
+	if m.previewValue == nil {
 		return m, nil
+	}
+	m.previewShown = !m.previewShown
+	m.previewMaskID++
+	if m.previewShown {
+		id := m.previewMaskID
+		return m, tea.Tick(30*time.Second, func(time.Time) tea.Msg {
+			return AutoMaskMsg{ID: id}
+		})
 	}
 	return m, nil
 }
@@ -437,14 +463,14 @@ func (m Model) handleCopy() (tea.Model, tea.Cmd) {
 		if len(selectedKeys) == 1 {
 			raw, err := runner.GetValue(context.Background(), file, selectedKeys[0])
 			if err != nil {
-				return SetErrorMsg{Err: err}
+				return CopyErrorMsg{Err: err}
 			}
 			text := string(raw)
 			for i := range raw {
 				raw[i] = 0
 			}
 			if err := clip.Write(text); err != nil {
-				return SetErrorMsg{Err: err}
+				return CopyErrorMsg{Err: err}
 			}
 			return CopyCompleteMsg{Key: selectedKeys[0]}
 		}
@@ -452,7 +478,7 @@ func (m Model) handleCopy() (tea.Model, tea.Cmd) {
 		// Multi-copy
 		kv, err := runner.GetAll(context.Background(), file)
 		if err != nil {
-			return SetErrorMsg{Err: err}
+			return CopyErrorMsg{Err: err}
 		}
 		var lines []string
 		for _, k := range selectedKeys {
@@ -473,7 +499,7 @@ func (m Model) handleCopy() (tea.Model, tea.Cmd) {
 			text += l
 		}
 		if err := clip.Write(text); err != nil {
-			return SetErrorMsg{Err: err}
+			return CopyErrorMsg{Err: err}
 		}
 		return CopyMultiCompleteMsg{Count: len(lines)}
 	}

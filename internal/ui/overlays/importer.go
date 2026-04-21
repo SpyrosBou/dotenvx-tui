@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
-	tea "charm.land/bubbletea/v2"
 	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 	"github.com/warui1/dotenvx-tui/internal/dotenvx"
 	"github.com/warui1/dotenvx-tui/internal/theme"
 	"github.com/warui1/dotenvx-tui/internal/validate"
@@ -41,8 +42,8 @@ type ImportOverlay struct {
 	Cursor int
 
 	// Key selection
-	Keys       []ImportKey
-	KeyCursor  int
+	Keys      []ImportKey
+	KeyCursor int
 
 	// Target
 	TargetFile string
@@ -155,7 +156,14 @@ func (o *ImportOverlay) findPlaintextFiles() tea.Cmd {
 	return func() tea.Msg {
 		var files []string
 		err := filepath.WalkDir(targetDir, func(path string, d os.DirEntry, err error) error {
-			if err != nil || d.IsDir() {
+			if err != nil {
+				return nil
+			}
+			if d.IsDir() {
+				switch d.Name() {
+				case ".git", "node_modules", "vendor":
+					return filepath.SkipDir
+				}
 				return nil
 			}
 			name := d.Name()
@@ -180,10 +188,10 @@ func (o *ImportOverlay) findPlaintextFiles() tea.Cmd {
 		if err != nil {
 			return importFilesFoundMsg{Files: nil}
 		}
+		sort.Strings(files)
 		return importFilesFoundMsg{Files: files}
 	}
 }
-
 
 func (o *ImportOverlay) loadKeysFromFile(file string) tea.Cmd {
 	targetDir := o.TargetDir

@@ -148,7 +148,7 @@ func (m Model) loadValue(file, key string) tea.Cmd {
 	return func() tea.Msg {
 		raw, err := runner.GetValue(context.Background(), file, key)
 		if err != nil {
-			return ValueLoadErrorMsg{Err: err}
+			return ValueLoadErrorMsg{Key: key, Err: err}
 		}
 		sec := secret.New(raw)
 		return ValueLoadedMsg{Key: key, Value: sec}

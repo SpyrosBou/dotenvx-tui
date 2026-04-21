@@ -4,23 +4,24 @@ import "charm.land/bubbles/v2/key"
 
 // KeyMap holds all key bindings for the application.
 type KeyMap struct {
-	Quit       key.Binding
-	Up         key.Binding
-	Down       key.Binding
-	NextPanel  key.Binding
-	PrevPanel  key.Binding
-	Select     key.Binding
-	ToggleSel  key.Binding
-	SelectAll  key.Binding
-	Set        key.Binding
-	Diff       key.Binding
-	Import     key.Binding
-	Export     key.Binding
-	Copy       key.Binding
-	New        key.Binding
-	Delete     key.Binding
-	Help       key.Binding
-	Back       key.Binding
+	Quit      key.Binding
+	Up        key.Binding
+	Down      key.Binding
+	NextPanel key.Binding
+	PrevPanel key.Binding
+	Select    key.Binding
+	ToggleSel key.Binding
+	SelectAll key.Binding
+	Set       key.Binding
+	Diff      key.Binding
+	Import    key.Binding
+	Export    key.Binding
+	Get       key.Binding
+	Copy      key.Binding
+	New       key.Binding
+	Delete    key.Binding
+	Help      key.Binding
+	Back      key.Binding
 }
 
 // DefaultKeyMap returns the default key bindings.
@@ -73,6 +74,10 @@ func DefaultKeyMap() KeyMap {
 		Export: key.NewBinding(
 			key.WithKeys("e"),
 			key.WithHelp("e", "export"),
+		),
+		Get: key.NewBinding(
+			key.WithKeys("g"),
+			key.WithHelp("g", "get"),
 		),
 		Copy: key.NewBinding(
 			key.WithKeys("c"),

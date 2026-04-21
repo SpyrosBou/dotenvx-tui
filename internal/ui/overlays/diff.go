@@ -6,8 +6,8 @@ import (
 	"sort"
 	"strings"
 
-	tea "charm.land/bubbletea/v2"
 	"charm.land/bubbles/v2/key"
+	tea "charm.land/bubbletea/v2"
 	"github.com/warui1/dotenvx-tui/internal/dotenvx"
 	"github.com/warui1/dotenvx-tui/internal/theme"
 )
@@ -42,16 +42,17 @@ type DiffOverlay struct {
 	Step   DiffStep
 
 	// Env picker
-	Envs       []string
-	Cursor     int
-	LeftEnv    string
-	RightEnv   string
-	Scope      string
+	Envs     []string
+	Cursor   int
+	LeftEnv  string
+	RightEnv string
+	Scope    string
 
 	// Results
-	Rows       []DiffRow
-	SameCount  int
-	ScrollY    int
+	Rows      []DiffRow
+	SameCount int
+	ScrollY   int
+	Error     string
 
 	Runner *dotenvx.Runner
 	Files  []dotenvx.EnvFile
@@ -74,6 +75,7 @@ func (o *DiffOverlay) Open(scope, currentEnv string, envs []string, files []dote
 	o.Cursor = 0
 	o.Rows = nil
 	o.ScrollY = 0
+	o.Error = ""
 
 	// Filter out the current env from choices
 	var choices []string
@@ -99,8 +101,17 @@ func (o *DiffOverlay) Update(msg tea.Msg) (tea.Cmd, bool) {
 
 	switch msg := msg.(type) {
 	case diffResultMsg:
+		if msg.Err != nil {
+			o.Rows = nil
+			o.SameCount = 0
+			o.Error = msg.Err.Error()
+			o.Step = DiffStepShowResult
+			o.ScrollY = 0
+			return nil, true
+		}
 		o.Rows = msg.Rows
 		o.SameCount = msg.SameCount
+		o.Error = ""
 		o.Step = DiffStepShowResult
 		o.ScrollY = 0
 		return nil, true
@@ -169,11 +180,11 @@ func (o *DiffOverlay) computeDiff() tea.Cmd {
 	return func() tea.Msg {
 		leftKV, err := runner.GetAll(context.Background(), leftFile.Path)
 		if err != nil {
-			return diffResultMsg{Rows: nil}
+			return diffResultMsg{Err: fmt.Errorf("failed to decrypt %s: %w", leftFile.Path, err)}
 		}
 		rightKV, err := runner.GetAll(context.Background(), rightFile.Path)
 		if err != nil {
-			return diffResultMsg{Rows: nil}
+			return diffResultMsg{Err: fmt.Errorf("failed to decrypt %s: %w", rightFile.Path, err)}
 		}
 
 		// Collect all keys
@@ -251,6 +262,14 @@ func (o *DiffOverlay) View(width int) string {
 		b.WriteString(o.Styles.OverlayTitle.Render(fmt.Sprintf("Diff: %s vs %s", o.LeftEnv, o.RightEnv)))
 		b.WriteString("\n\n")
 
+		if o.Error != "" {
+			b.WriteString(o.Styles.StatusError.Render(o.Error))
+			b.WriteString("\n\n" + o.Styles.HelpBar.Render("esc: back"))
+			return o.Styles.Overlay.
+				Width(min(65, width-4)).
+				Render(b.String())
+		}
+
 		// Show non-identical rows first, then identical count
 		visible := o.Rows
 		end := min(o.ScrollY+15, len(visible))
@@ -286,4 +305,5 @@ func (o *DiffOverlay) View(width int) string {
 type diffResultMsg struct {
 	Rows      []DiffRow
 	SameCount int
+	Err       error
 }

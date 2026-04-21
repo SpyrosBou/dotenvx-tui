@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	tea "charm.land/bubbletea/v2"
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
 	"github.com/warui1/dotenvx-tui/internal/dotenvx"
 	"github.com/warui1/dotenvx-tui/internal/secret"
 	"github.com/warui1/dotenvx-tui/internal/theme"
@@ -137,6 +137,9 @@ func (o *SetValueOverlay) Update(msg tea.Msg) (tea.Cmd, bool) {
 		o.CurrentValue = msg.Value
 		return nil, true
 
+	case setValueStepDoneMsg:
+		return nil, true
+
 	case tea.KeyPressMsg:
 		switch {
 		case key.Matches(msg, key.NewBinding(key.WithKeys("escape"))):
@@ -218,10 +221,14 @@ func (o *SetValueOverlay) handleEnter() (tea.Cmd, bool) {
 		o.CurrentValue = nil
 	}
 
+	isFinal := o.CurrentIndex+1 >= len(o.Keys)
 	cmd := func() tea.Msg {
 		err := runner.Set(context.Background(), file, keyName, []byte(value))
 		if err != nil {
 			return SetErrorMsg{Err: err}
+		}
+		if !isFinal {
+			return setValueStepDoneMsg{}
 		}
 		return SetDoneMsg{Key: keyName, File: file}
 	}
@@ -301,6 +308,8 @@ func (o *SetValueOverlay) View(width int) string {
 type setValueCurrentValueMsg struct {
 	Value *secret.SecureBytes
 }
+
+type setValueStepDoneMsg struct{}
 
 // Messages emitted by the set overlay.
 type SetDoneMsg struct {

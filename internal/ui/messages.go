@@ -50,12 +50,16 @@ type ValueLoadedMsg struct {
 	Key   string
 	Value *secret.SecureBytes
 }
-type ValueLoadErrorMsg struct{ Err error }
+type ValueLoadErrorMsg struct {
+	Key string
+	Err error
+}
 
 // Action messages.
 type SetErrorMsg struct{ Err error }
 type CopyCompleteMsg struct{ Key string }
 type CopyMultiCompleteMsg struct{ Count int }
+type CopyErrorMsg struct{ Err error }
 
 // Status.
 type ClearStatusMsg struct{ ID int }

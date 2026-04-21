@@ -29,6 +29,7 @@ Keybindings:
   enter            Select / Reveal value
   space            Toggle multi-select (Keys panel)
   s                Set key value
+  g                Get / decrypt value
   d                Diff two environments
   i                Import from plaintext .env file
   e                Export to clipboard
