@@ -41,7 +41,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set npm package version
-        run: ./scripts/set-version.sh ${{ steps.version.outputs.VERSION }}
+        run: ./scripts/set-version.sh "$VERSION"
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
 
       - name: Publish to npm
         working-directory: npm
