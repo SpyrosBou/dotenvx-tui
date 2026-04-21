@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- Corrected repository URLs and Go install paths to use the real GitHub release repository.
+- Added a maintainer npm publish workflow that can publish the package independently of GitHub release creation.
+- Hardened npm version-setting scripts and workflows to validate semver input before publishing.
+- Updated project documentation to describe staged set/delete security behavior and clipboard/temp-file limitations accurately.
+
 ## [2.1.2] - 2026-04-21
 
 ### Fixed

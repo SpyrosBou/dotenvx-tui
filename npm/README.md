@@ -11,7 +11,7 @@ Full-screen terminal UI for managing [dotenvx](https://dotenvx.com)-encrypted en
 ┌─ Preview ────────────────────────────────────────┐
 │ DATABASE_URL = post••••••••••••••••••            │
 └──────────────────────────────────────────────────┘
- s:set  g:get  d:diff  i:import  e:export  c:copy
+ n:new  s:set  g:get  x:delete  d:diff  i:import  e:export  c:copy
 ```
 
 ## Install
@@ -19,6 +19,8 @@ Full-screen terminal UI for managing [dotenvx](https://dotenvx.com)-encrypted en
 ```bash
 npm install -g dotenvx-tui
 ```
+
+The npm package is a small launcher. On first run, it downloads the matching platform binary from GitHub Releases and caches it under the package `bin/` directory.
 
 ## Usage
 
@@ -37,17 +39,19 @@ npx dotenvx-tui
 
 [dotenvx](https://dotenvx.com) must be installed: `brew install dotenvx/brew/dotenvx`
 
+Supported npm binary downloads: macOS/Linux on `amd64` and `arm64`.
+
 ## Features
 
 - Three-panel browser (Scopes | Environments | Keys)
 - Keyboard-driven navigation with circular wrapping
 - Multi-select batch operations
-- Set, get, diff, import, export, and copy to clipboard
+- Create, set, get, delete, diff, import, export, and copy to clipboard
 - Live file watching (auto-refresh on changes)
 - Masked value preview with auto-mask timer
-- Memory-safe secret handling
+- Staged set/delete rewrites that avoid decrypting the real target file in place
 
-Full documentation: [github.com/warui1/dotenvx-tui](https://github.com/warui1/dotenvx-tui)
+Full documentation and source install instructions: [github.com/SpyrosBou/dotenvx-tui](https://github.com/SpyrosBou/dotenvx-tui)
 
 ## License
 

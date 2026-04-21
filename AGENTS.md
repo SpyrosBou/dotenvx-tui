@@ -22,6 +22,7 @@ Generated binaries and release artifacts (`dotenvx-tui`, `dist/`) are ignored.
 - `make lint` runs `golangci-lint run ./...`; install `golangci-lint` locally first.
 - `make build-all` creates static Darwin/Linux binaries in `dist/`.
 - `make release-dry-run` validates the GoReleaser configuration without publishing.
+- `gh workflow run npm-publish.yml -f version=<version>` publishes the npm package independently of the GoReleaser GitHub release workflow. It packages from `main` by default; pass `-f ref=<tag-or-branch>` when exact source matching matters.
 
 The TUI expects `dotenvx` to be installed and available on `PATH`.
 
@@ -43,4 +44,6 @@ For pull requests, include a short behavior summary, commands run, and any user-
 
 ## Security & Configuration Tips
 
-Never commit `.env*` files, decrypted values, private keys, or generated npm binaries. Preserve the existing secret-handling approach: mask values by default, avoid secrets in errors, and use `internal/secret.SecureBytes` for decrypted material.
+Never commit `.env*` files, decrypted values, private keys, or generated npm binaries. Preserve the existing secret-handling approach: mask values by default, avoid secrets in errors, use `internal/secret.SecureBytes` for previewed decrypted material, and avoid passing secret values through subprocess arguments.
+
+Set/delete operations intentionally rewrite through private staging and atomic replacement instead of decrypting the real target file in place. Keep that property intact. Clipboard/export flows still materialize secrets in memory and the OS clipboard, so do not overstate memory-safety guarantees in docs or code comments.

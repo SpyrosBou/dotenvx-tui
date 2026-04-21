@@ -14,6 +14,7 @@ See `AGENTS.md` for the full contributor guide (structure, style, commit scopes)
 - `make build-all` — cross-compile static darwin/linux × arm64/amd64 binaries into `dist/`.
 - `make release-dry-run` — `goreleaser release --snapshot --clean` (validates `.goreleaser.yaml` without publishing).
 - `./scripts/set-version.sh <version>` — update `npm/package.json` version (called by the release workflow; don't hand-edit the version).
+- `gh workflow run npm-publish.yml -f version=<version>` — publish the npm package independently of the GoReleaser GitHub release workflow. It packages from `main` by default; pass `-f ref=<tag-or-branch>` when exact source matching matters.
 
 The committed `./dotenvx-tui` binary in the repo root is gitignored — `make build` overwrites it.
 
@@ -60,8 +61,10 @@ The header check is what separates real dotenvx files from plaintext `.env.local
 - Every call first runs `validate.FilePath(workDir, file)` to prevent path traversal and symlink escape.
 - `stderr` bytes are the source of error messages; **never surface `stdout`** in errors (it contains decrypted values).
 - `stdout` buffers holding decrypted data are zeroed with a `for i := range ...` loop before the function returns.
+- `Set` and `Unset` do not call `dotenvx set` or decrypt the target file in place. They use `decrypt --stdout`, transform plaintext in memory, write a private staged plaintext file, run `encrypt --stdout`, and atomically replace the encrypted target.
+- The staged plaintext file is a compromise forced by dotenvx's file-oriented encrypt command. It must stay `0600`, in a temp directory, and removed with `defer os.RemoveAll`.
 
-`Runner.Unset` is **non-atomic**: it `dotenvx decrypt`s in place, reads, filters lines, writes, then `dotenvx encrypt`s. If any step after decrypt fails, it attempts to re-encrypt via a deferred path. If you touch this, preserve the re-encrypt recovery — a crash between decrypt and encrypt leaves plaintext secrets on disk.
+`formatEnvValue` intentionally rejects values with newlines or values containing all three quote delimiters (backtick, single quote, and double quote). Do not silently fall back to passing those values through process arguments; that reintroduces the original leak.
 
 ### Secret handling (`internal/secret/secure.go`)
 
@@ -93,6 +96,8 @@ Typed `AppError` with `Kind` enum for user-facing errors. `Message` must never c
 
 `npm/` is a thin Node wrapper. `npm/install.js` is a no-op (kept to not break existing installs); `npm/bin/cli.js` downloads the platform-specific binary from the GitHub release on first run, verifies against `package.json` `version`, caches in `npm/bin/dotenvx-tui`, then `spawn`s it. The downloaded binary is gitignored.
 
+The npm launcher must download from `SpyrosBou/dotenvx-tui`, because that is where GoReleaser publishes release assets.
+
 ## Release pipeline
 
 Push a `v*` tag → `.github/workflows/release.yml`:
@@ -102,7 +107,13 @@ Push a `v*` tag → `.github/workflows/release.yml`:
 3. `scripts/set-version.sh` updates `npm/package.json`.
 4. `npm publish --access public` from `npm/`.
 
-Don't manually edit `npm/package.json`'s `version` before tagging — the workflow rewrites it to match the tag. The repository `module` path is `github.com/warui1/dotenvx-tui` (in `go.mod` and the install script), while the GitHub release owner is `SpyrosBou`; both are load-bearing, don't "fix" one to match the other without confirming.
+`NPM_TOKEN` must be a valid npm granular token for the `spyrosbou` maintainer with publish/write access to `dotenvx-tui`. If npm publish needs to be rerun after the GitHub Release already exists, do **not** rerun the full release workflow: GoReleaser will fail because the release already exists. Correct the npm credentials, then run the npm-only workflow:
+
+```bash
+gh workflow run npm-publish.yml --repo SpyrosBou/dotenvx-tui -f version=<version>
+```
+
+Don't manually edit `npm/package.json`'s `version` before tagging — the workflows rewrite it to match the tag/input. The repository module path, npm launcher repository, npm package metadata, and GoReleaser owner should all point at `github.com/SpyrosBou/dotenvx-tui`.
 
 ## Files to leave alone
 
