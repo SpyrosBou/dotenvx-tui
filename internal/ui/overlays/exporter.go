@@ -6,11 +6,11 @@ import (
 	"sort"
 	"strings"
 
-	tea "charm.land/bubbletea/v2"
 	"charm.land/bubbles/v2/key"
-	clip "github.com/warui1/dotenvx-tui/internal/clipboard"
-	"github.com/warui1/dotenvx-tui/internal/dotenvx"
-	"github.com/warui1/dotenvx-tui/internal/theme"
+	tea "charm.land/bubbletea/v2"
+	clip "github.com/SpyrosBou/dotenvx-tui/internal/clipboard"
+	"github.com/SpyrosBou/dotenvx-tui/internal/dotenvx"
+	"github.com/SpyrosBou/dotenvx-tui/internal/theme"
 )
 
 // ExportOverlay handles exporting decrypted keys to clipboard.

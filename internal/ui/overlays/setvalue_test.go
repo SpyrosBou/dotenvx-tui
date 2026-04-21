@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/warui1/dotenvx-tui/internal/dotenvx"
-	"github.com/warui1/dotenvx-tui/internal/theme"
+	"github.com/SpyrosBou/dotenvx-tui/internal/dotenvx"
+	"github.com/SpyrosBou/dotenvx-tui/internal/theme"
 )
 
 func TestBatchSetKeepsOverlayOpenAfterIntermediateKey(t *testing.T) {

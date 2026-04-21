@@ -4,17 +4,17 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/warui1/dotenvx-tui/internal/theme"
+	"github.com/SpyrosBou/dotenvx-tui/internal/theme"
 )
 
 // ScopePanel displays the list of discovered scopes (directories).
 type ScopePanel struct {
-	Items      []string
-	Cursor     int
-	Selected   int
-	Width      int
-	Height     int
-	scrollOff  int
+	Items     []string
+	Cursor    int
+	Selected  int
+	Width     int
+	Height    int
+	scrollOff int
 }
 
 // CursorUp moves the cursor up with circular wrapping.

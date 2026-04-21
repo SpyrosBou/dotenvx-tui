@@ -6,7 +6,7 @@ const path = require("path");
 const fs = require("fs");
 
 const NAME = "dotenvx-tui";
-const REPO = "warui1/dotenvx-tui";
+const REPO = "SpyrosBou/dotenvx-tui";
 const VERSION = require("../package.json").version;
 const binDir = __dirname;
 const binPath = path.join(binDir, NAME);

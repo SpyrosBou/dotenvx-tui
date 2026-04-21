@@ -1,4 +1,4 @@
-module github.com/warui1/dotenvx-tui
+module github.com/SpyrosBou/dotenvx-tui
 
 go 1.26.1
 

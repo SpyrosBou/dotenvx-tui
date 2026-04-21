@@ -8,10 +8,10 @@ import (
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
-	"github.com/warui1/dotenvx-tui/internal/dotenvx"
-	"github.com/warui1/dotenvx-tui/internal/secret"
-	"github.com/warui1/dotenvx-tui/internal/theme"
-	"github.com/warui1/dotenvx-tui/internal/validate"
+	"github.com/SpyrosBou/dotenvx-tui/internal/dotenvx"
+	"github.com/SpyrosBou/dotenvx-tui/internal/secret"
+	"github.com/SpyrosBou/dotenvx-tui/internal/theme"
+	"github.com/SpyrosBou/dotenvx-tui/internal/validate"
 )
 
 // SetStep tracks the current step in the set-value flow.

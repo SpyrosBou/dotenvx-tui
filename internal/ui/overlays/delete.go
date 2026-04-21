@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	tea "charm.land/bubbletea/v2"
 	"charm.land/bubbles/v2/key"
-	"github.com/warui1/dotenvx-tui/internal/dotenvx"
-	"github.com/warui1/dotenvx-tui/internal/theme"
+	tea "charm.land/bubbletea/v2"
+	"github.com/SpyrosBou/dotenvx-tui/internal/dotenvx"
+	"github.com/SpyrosBou/dotenvx-tui/internal/theme"
 )
 
 // DeleteOverlay handles confirming and executing key deletion.

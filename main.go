@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/warui1/dotenvx-tui/internal/ui"
+	"github.com/SpyrosBou/dotenvx-tui/internal/ui"
 )
 
 var version = "dev"

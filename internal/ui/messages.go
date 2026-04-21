@@ -1,8 +1,8 @@
 package ui
 
 import (
-	"github.com/warui1/dotenvx-tui/internal/dotenvx"
-	"github.com/warui1/dotenvx-tui/internal/secret"
+	"github.com/SpyrosBou/dotenvx-tui/internal/dotenvx"
+	"github.com/SpyrosBou/dotenvx-tui/internal/secret"
 )
 
 // PanelID identifies which panel is focused.

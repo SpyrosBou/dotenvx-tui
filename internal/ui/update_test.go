@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/warui1/dotenvx-tui/internal/secret"
+	"github.com/SpyrosBou/dotenvx-tui/internal/secret"
 )
 
 func TestUpdateIgnoresStaleValueLoadedMsg(t *testing.T) {

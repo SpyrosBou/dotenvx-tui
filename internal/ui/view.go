@@ -6,7 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/warui1/dotenvx-tui/internal/theme"
+	"github.com/SpyrosBou/dotenvx-tui/internal/theme"
 )
 
 // View renders the entire UI.

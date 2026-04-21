@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/warui1/dotenvx-tui/internal/theme"
+	"github.com/SpyrosBou/dotenvx-tui/internal/theme"
 )
 
 // EnvPanel displays the list of environments for the selected scope.

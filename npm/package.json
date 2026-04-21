@@ -4,10 +4,10 @@
   "description": "Full-screen terminal UI for managing dotenvx-encrypted environment variables",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/warui1/dotenvx-tui.git"
+    "url": "git+https://github.com/SpyrosBou/dotenvx-tui.git"
   },
   "license": "MIT",
-  "author": "warui1",
+  "author": "SpyrosBou",
   "bin": {
     "dotenvx-tui": "bin/cli.js"
   },

@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/warui1/dotenvx-tui/internal/validate"
+	"github.com/SpyrosBou/dotenvx-tui/internal/validate"
 )
 
 const defaultTimeout = 30 * time.Second

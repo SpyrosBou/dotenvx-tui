@@ -8,12 +8,12 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/warui1/dotenvx-tui/internal/dotenvx"
-	"github.com/warui1/dotenvx-tui/internal/secret"
-	"github.com/warui1/dotenvx-tui/internal/theme"
-	"github.com/warui1/dotenvx-tui/internal/ui/overlays"
-	"github.com/warui1/dotenvx-tui/internal/ui/panels"
-	"github.com/warui1/dotenvx-tui/internal/watcher"
+	"github.com/SpyrosBou/dotenvx-tui/internal/dotenvx"
+	"github.com/SpyrosBou/dotenvx-tui/internal/secret"
+	"github.com/SpyrosBou/dotenvx-tui/internal/theme"
+	"github.com/SpyrosBou/dotenvx-tui/internal/ui/overlays"
+	"github.com/SpyrosBou/dotenvx-tui/internal/ui/panels"
+	"github.com/SpyrosBou/dotenvx-tui/internal/watcher"
 )
 
 // Model is the root Bubbletea model for the application.
