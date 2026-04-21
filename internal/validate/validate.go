@@ -33,7 +33,12 @@ func FilePath(targetDir, path string) error {
 		return fmt.Errorf("cannot resolve target directory: %w", err)
 	}
 
-	abs, err := filepath.Abs(path)
+	candidate := path
+	if !filepath.IsAbs(candidate) {
+		candidate = filepath.Join(absTarget, candidate)
+	}
+
+	abs, err := filepath.Abs(candidate)
 	if err != nil {
 		return fmt.Errorf("cannot resolve path: %w", err)
 	}
