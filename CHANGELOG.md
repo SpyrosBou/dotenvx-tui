@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.2] - 2026-04-21
+
+### Fixed
+- Set and delete workflows now rewrite encrypted files through private staging and atomic replacement instead of decrypting target files in place.
+- Setting values no longer passes secret values through `dotenvx set` process arguments.
+- Batch set overlays stay open until the final selected key has been processed.
+- The documented `g` keybinding now reveals the selected value.
+- Stale asynchronous decrypt results no longer overwrite the current preview after fast navigation.
+- Copy failures now report as copy failures instead of set failures.
+- Diff overlays now surface decrypt errors instead of showing an empty result.
+- Import file discovery skips heavy dependency directories and returns deterministic ordering.
+- The npm launcher now extracts downloaded release archives without shell interpolation.
+
 ## [2.1.1] - 2026-03-19
 
 ### Fixed
