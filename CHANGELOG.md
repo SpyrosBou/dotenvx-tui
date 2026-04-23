@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.1.3] - 2026-04-23
+
 ### Fixed
 - Corrected repository URLs and Go install paths to use the real GitHub release repository.
 - Added a maintainer npm publish workflow that can publish the package independently of GitHub release creation.
