@@ -13,8 +13,3 @@ func Write(text string) error {
 	}
 	return nil
 }
-
-// IsAvailable returns true if clipboard access is supported.
-func IsAvailable() bool {
-	return !clipboard.Unsupported
-}

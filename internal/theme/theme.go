@@ -51,10 +51,8 @@ func NewTheme(hasDarkBG bool) Theme {
 
 // Styles holds all pre-computed lipgloss styles for the UI.
 type Styles struct {
-	FocusedBorder lipgloss.Style
-	BlurredBorder lipgloss.Style
-	FocusedTitle  lipgloss.Style
-	BlurredTitle  lipgloss.Style
+	FocusedTitle lipgloss.Style
+	BlurredTitle lipgloss.Style
 
 	ActiveItem   lipgloss.Style
 	InactiveItem lipgloss.Style
@@ -82,12 +80,6 @@ type Styles struct {
 // NewStyles creates all styles from a theme.
 func NewStyles(t Theme) Styles {
 	return Styles{
-		FocusedBorder: lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(t.Primary),
-		BlurredBorder: lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(t.Dim),
 		FocusedTitle: lipgloss.NewStyle().
 			Bold(true).
 			Foreground(t.Primary).
