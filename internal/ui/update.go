@@ -24,8 +24,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	// Handle overlay result messages regardless of overlay state.
-	// These arrive asynchronously after the overlay may have already closed.
+	// Handle app and overlay result messages before overlay input. Bubble Tea
+	// commands complete asynchronously, so these messages must not be dropped
+	// just because a modal overlay is currently accepting key input.
 	switch msg := msg.(type) {
 	case overlays.SetDoneMsg:
 		m.setOverlay.Close()
@@ -82,25 +83,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(m.discoverFiles(), m.fileWatcher.Cmd())
 		}
 		return m, m.discoverFiles()
-	}
 
-	// Handle overlay input first if an overlay is active
-	if m.activeOverlay != OverlayNone {
-		return m.updateOverlay(msg)
-	}
-
-	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
 		m.layout = ComputeLayout(m.width, m.height, len(dotenvx.Scopes(m.envFiles)))
 		m.updatePanelSizes()
+		m = m.normalizeFocus()
 		return m, nil
 
 	case tea.BackgroundColorMsg:
 		m.hasDarkBG = msg.IsDark()
 		m.theme = theme.NewTheme(m.hasDarkBG)
 		m.styles = theme.NewStyles(m.theme)
+		m.updateOverlayStyles()
 		return m, nil
 
 	case FilesDiscoveredMsg:
@@ -111,21 +107,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case KeysLoadedMsg:
+		if msg.File != m.currentFile() {
+			return m, nil
+		}
 		m.keyPanel.Reset(msg.Keys)
 		m.loading = false
-		// Load preview for first key
-		if len(msg.Keys) > 0 {
-			return m, m.loadValue(m.currentFile(), msg.Keys[0])
+		m.clearPreview()
+		if len(msg.Keys) == 0 {
+			return m, nil
 		}
-		return m, nil
+		m.previewKey = msg.Keys[0]
+		return m, m.loadValue(msg.File, msg.Keys[0])
 
 	case KeysLoadErrorMsg:
+		if msg.File != m.currentFile() {
+			return m, nil
+		}
 		m.loading = false
 		m, cmd := setStatus(m, "Failed to load keys: "+msg.Err.Error(), StatusError)
 		return m, cmd
 
 	case ValueLoadedMsg:
-		if msg.Key != m.previewKey {
+		if msg.File != m.currentFile() || msg.Key != m.previewKey {
 			if msg.Value != nil {
 				msg.Value.Clear()
 			}
@@ -142,16 +145,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case ValueLoadErrorMsg:
-		if msg.Key != m.previewKey {
+		if msg.File != m.currentFile() || msg.Key != m.previewKey {
 			return m, nil
 		}
-		m.previewKey = ""
-		m.previewShown = false
+		m.clearPreview()
 		m, cmd := setStatus(m, "Failed to decrypt: "+msg.Err.Error(), StatusError)
-		return m, cmd
-
-	case SetErrorMsg:
-		m, cmd := setStatus(m, "Set failed: "+msg.Err.Error(), StatusError)
 		return m, cmd
 
 	case CopyCompleteMsg:
@@ -177,32 +175,51 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.previewShown = false
 		}
 		return m, nil
-
-	case tea.KeyPressMsg:
-		return m.handleKeyPress(msg)
 	}
 
+	if m.activeOverlay != OverlayNone {
+		return m.updateOverlay(msg)
+	}
+
+	if kmsg, ok := msg.(tea.KeyPressMsg); ok {
+		return m.handleKeyPress(kmsg)
+	}
+
+	overlays.ClearSensitiveMsg(msg)
 	return m, nil
 }
 
 func (m Model) handleFilesDiscovered(msg FilesDiscoveredMsg) (tea.Model, tea.Cmd) {
+	previousScope := m.scopePanel.SelectedItem()
+	previousEnv := m.envPanel.SelectedItem()
+
 	m.envFiles = msg.Files
 
 	scopes := dotenvx.Scopes(m.envFiles)
 	m.scopePanel.Items = scopes
 	m.scopePanel.Cursor = 0
 	m.scopePanel.Selected = 0
+	m.clearPreview()
 
-	// Clear stale preview data when the filesystem snapshot changes.
-	if m.previewValue != nil {
-		m.previewValue.Clear()
-		m.previewValue = nil
+	m.layout = ComputeLayout(m.width, m.height, len(scopes))
+	m.updatePanelSizes()
+	m = m.normalizeFocus()
+
+	watchModel, watchCmd, watchErr := m.startFileWatcher()
+	m = watchModel
+
+	if len(scopes) == 0 {
+		m.runner = nil
+		m.envPanel.Reset(nil)
+		m.keyPanel.Reset(nil)
+		m.loading = false
+		if watchErr != nil {
+			warn, warnCmd := setStatus(m, "Live refresh unavailable: "+watchErr.Error(), StatusWarning)
+			return warn, tea.Batch(warnCmd, watchCmd)
+		}
+		return m, watchCmd
 	}
-	m.previewKey = ""
-	m.previewShown = false
-	m.previewMaskID++
 
-	// Try to init runner
 	runner, err := dotenvx.NewRunner(m.targetDir)
 	if err != nil {
 		m.fatalErr = err.Error()
@@ -210,30 +227,22 @@ func (m Model) handleFilesDiscovered(msg FilesDiscoveredMsg) (tea.Model, tea.Cmd
 	}
 	m.runner = runner
 
-	// Recalculate layout
-	m.layout = ComputeLayout(m.width, m.height, len(scopes))
-	m.updatePanelSizes()
-
-	watchModel, watchCmd, watchErr := m.startFileWatcher()
-	m = watchModel
-
-	// If we have scopes, populate envs for first scope
-	if len(scopes) > 0 {
-		nextModel, cmd := m.selectScope(scopes[0])
-		next := nextModel.(Model)
-		if watchErr != nil {
-			warn, warnCmd := setStatus(next, "Live refresh unavailable: "+watchErr.Error(), StatusWarning)
-			return warn, tea.Batch(cmd, warnCmd)
-		}
-		return next, tea.Batch(cmd, watchCmd)
+	scope := scopes[0]
+	preferredEnv := ""
+	if idx := indexOf(scopes, previousScope); idx >= 0 {
+		scope = previousScope
+		preferredEnv = previousEnv
+		m.scopePanel.Cursor = idx
+		m.scopePanel.Selected = idx
 	}
 
-	m.loading = false
+	nextModel, cmd := m.selectScopeEnv(scope, preferredEnv)
+	next := nextModel.(Model)
 	if watchErr != nil {
-		warn, warnCmd := setStatus(m, "Live refresh unavailable: "+watchErr.Error(), StatusWarning)
-		return warn, tea.Batch(warnCmd, watchCmd)
+		warn, warnCmd := setStatus(next, "Live refresh unavailable: "+watchErr.Error(), StatusWarning)
+		return warn, tea.Batch(cmd, warnCmd, watchCmd)
 	}
-	return m, watchCmd
+	return next, tea.Batch(cmd, watchCmd)
 }
 
 func (m Model) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
@@ -419,12 +428,23 @@ func (m Model) togglePreviewReveal() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) selectScope(scope string) (tea.Model, tea.Cmd) {
+	return m.selectScopeEnv(scope, "")
+}
+
+func (m Model) selectScopeEnv(scope, preferredEnv string) (tea.Model, tea.Cmd) {
 	envs := dotenvx.EnvsForScope(m.envFiles, scope)
 	m.envPanel.Reset(envs)
 	if len(envs) > 0 {
+		if idx := indexOf(envs, preferredEnv); idx >= 0 {
+			m.envPanel.Cursor = idx
+			m.envPanel.Selected = idx
+			return m.selectEnv(preferredEnv)
+		}
 		return m.selectEnv(envs[0])
 	}
 	m.keyPanel.Reset(nil)
+	m.loading = false
+	m.clearPreview()
 	return m, nil
 }
 
@@ -436,14 +456,7 @@ func (m Model) selectEnv(_ string) (tea.Model, tea.Cmd) {
 	}
 	m.loading = true
 	m.loadingMsg = "Loading keys..."
-	// Clear old preview
-	if m.previewValue != nil {
-		m.previewValue.Clear()
-		m.previewValue = nil
-	}
-	m.previewKey = ""
-	m.previewShown = false
-	m.previewMaskID++
+	m.clearPreview()
 	return m, m.loadKeys(file)
 }
 
@@ -640,6 +653,7 @@ func (m Model) updateOverlay(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	overlays.ClearSensitiveMsg(msg)
 	return m, nil
 }
 

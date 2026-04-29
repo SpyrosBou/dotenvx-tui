@@ -131,6 +131,12 @@ func (o *SetValueOverlay) Update(msg tea.Msg) (tea.Cmd, bool) {
 
 	switch msg := msg.(type) {
 	case setValueCurrentValueMsg:
+		if msg.File != o.File || msg.Key != o.CurrentKeyName() {
+			if msg.Value != nil {
+				msg.Value.Clear()
+			}
+			return nil, true
+		}
 		if o.CurrentValue != nil {
 			o.CurrentValue.Clear()
 		}
@@ -254,9 +260,9 @@ func (o *SetValueOverlay) loadCurrentValue() tea.Cmd {
 	return func() tea.Msg {
 		raw, err := runner.GetValue(context.Background(), file, key)
 		if err != nil {
-			return setValueCurrentValueMsg{Value: nil}
+			return setValueCurrentValueMsg{File: file, Key: key, Value: nil}
 		}
-		return setValueCurrentValueMsg{Value: secret.New(raw)}
+		return setValueCurrentValueMsg{File: file, Key: key, Value: secret.New(raw)}
 	}
 }
 
@@ -306,10 +312,23 @@ func (o *SetValueOverlay) View(width int) string {
 
 // Messages internal to the set overlay.
 type setValueCurrentValueMsg struct {
+	File  string
+	Key   string
 	Value *secret.SecureBytes
 }
 
 type setValueStepDoneMsg struct{}
+
+// ClearSensitiveMsg clears secret-bearing overlay messages that were not
+// accepted by the currently active overlay.
+func ClearSensitiveMsg(msg tea.Msg) {
+	switch msg := msg.(type) {
+	case setValueCurrentValueMsg:
+		if msg.Value != nil {
+			msg.Value.Clear()
+		}
+	}
+}
 
 // Messages emitted by the set overlay.
 type SetDoneMsg struct {

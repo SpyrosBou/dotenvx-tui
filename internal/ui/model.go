@@ -134,9 +134,9 @@ func (m Model) loadKeys(file string) tea.Cmd {
 	return func() tea.Msg {
 		keys, err := runner.GetKeys(context.Background(), file)
 		if err != nil {
-			return KeysLoadErrorMsg{Err: err}
+			return KeysLoadErrorMsg{File: file, Err: err}
 		}
-		return KeysLoadedMsg{Keys: keys}
+		return KeysLoadedMsg{File: file, Keys: keys}
 	}
 }
 
@@ -148,10 +148,10 @@ func (m Model) loadValue(file, key string) tea.Cmd {
 	return func() tea.Msg {
 		raw, err := runner.GetValue(context.Background(), file, key)
 		if err != nil {
-			return ValueLoadErrorMsg{Key: key, Err: err}
+			return ValueLoadErrorMsg{File: file, Key: key, Err: err}
 		}
 		sec := secret.New(raw)
-		return ValueLoadedMsg{Key: key, Value: sec}
+		return ValueLoadedMsg{File: file, Key: key, Value: sec}
 	}
 }
 
@@ -180,6 +180,24 @@ func (m *Model) cleanup() {
 		m.fileWatcher = nil
 	}
 	m.setOverlay.Close()
+}
+
+func (m *Model) clearPreview() {
+	if m.previewValue != nil {
+		m.previewValue.Clear()
+		m.previewValue = nil
+	}
+	m.previewKey = ""
+	m.previewShown = false
+	m.previewMaskID++
+}
+
+func (m *Model) updateOverlayStyles() {
+	m.setOverlay.Styles = m.styles
+	m.diffOverlay.Styles = m.styles
+	m.importOverlay.Styles = m.styles
+	m.exportOverlay.Styles = m.styles
+	m.deleteOverlay.Styles = m.styles
 }
 
 func (m Model) watchDirs() []string {
@@ -230,4 +248,20 @@ func (m Model) startFileWatcher() (Model, tea.Cmd, error) {
 	}
 	m.fileWatcher = fileWatcher
 	return m, cmd, nil
+}
+
+func indexOf(items []string, item string) int {
+	for i, candidate := range items {
+		if candidate == item {
+			return i
+		}
+	}
+	return -1
+}
+
+func (m Model) normalizeFocus() Model {
+	if m.layout.HideScopes && m.focusedPanel == PanelScopes {
+		m.focusedPanel = PanelEnvs
+	}
+	return m
 }

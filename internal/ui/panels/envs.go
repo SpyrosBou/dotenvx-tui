@@ -50,7 +50,7 @@ func (p *EnvPanel) Select() {
 
 // SelectedItem returns the currently selected environment name.
 func (p *EnvPanel) SelectedItem() string {
-	if len(p.Items) == 0 {
+	if len(p.Items) == 0 || p.Selected < 0 || p.Selected >= len(p.Items) {
 		return ""
 	}
 	return p.Items[p.Selected]

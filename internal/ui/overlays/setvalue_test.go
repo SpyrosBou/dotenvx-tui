@@ -7,6 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/SpyrosBou/dotenvx-tui/internal/dotenvx"
+	"github.com/SpyrosBou/dotenvx-tui/internal/secret"
 	"github.com/SpyrosBou/dotenvx-tui/internal/theme"
 )
 
@@ -67,4 +68,37 @@ func TestBatchSetKeepsOverlayOpenAfterIntermediateKey(t *testing.T) {
 	if !foundIntermediateDone {
 		t.Fatal("intermediate batch key did not emit setValueStepDoneMsg")
 	}
+}
+
+func TestSetValueOverlayIgnoresStaleCurrentValue(t *testing.T) {
+	styles := theme.NewStyles(theme.NewTheme(true))
+	overlay := NewSetValueOverlay(styles)
+	overlay.Active = true
+	overlay.File = ".env.local"
+	overlay.Keys = []string{"FIRST", "SECOND"}
+	overlay.CurrentIndex = 1
+	overlay.CurrentValue = secretValue("second-current")
+
+	stale := secretValue("first-current")
+	cmd, handled := overlay.Update(setValueCurrentValueMsg{
+		File:  ".env.local",
+		Key:   "FIRST",
+		Value: stale,
+	})
+	if !handled {
+		t.Fatal("stale current value message was not handled")
+	}
+	if cmd != nil {
+		t.Fatal("stale current value returned command")
+	}
+	if overlay.CurrentValue.String() != "second-current" {
+		t.Fatalf("CurrentValue = %q, want second-current", overlay.CurrentValue.String())
+	}
+	if stale.String() != "" {
+		t.Fatal("stale current value was not cleared")
+	}
+}
+
+func secretValue(s string) *secret.SecureBytes {
+	return secret.New([]byte(s))
 }

@@ -120,6 +120,62 @@ func TestUnsetDoesNotReplaceTargetWithPlaintextWhenEncryptFails(t *testing.T) {
 	}
 }
 
+func TestGetUsesOverloadSoFileValuesWinOverProcessEnv(t *testing.T) {
+	dir := t.TempDir()
+	argsPath := filepath.Join(dir, "args.txt")
+	fakeDotenvx := filepath.Join(dir, "dotenvx")
+	script := "#!/bin/sh\n" +
+		"printf '%s\\0' \"$@\" >> " + shellQuote(argsPath) + "\n" +
+		"printf '\\n' >> " + shellQuote(argsPath) + "\n" +
+		"if [ \"$1\" = get ] && [ \"$2\" = HOME ]; then\n" +
+		"  printf 'file-home\\n'\n" +
+		"  exit 0\n" +
+		"fi\n" +
+		"if [ \"$1\" = get ]; then\n" +
+		"  printf '{\"HOME\":\"file-home\"}'\n" +
+		"  exit 0\n" +
+		"fi\n" +
+		"exit 64\n"
+	if err := os.WriteFile(fakeDotenvx, []byte(script), 0o700); err != nil {
+		t.Fatalf("write fake dotenvx: %v", err)
+	}
+
+	runner := &Runner{binary: fakeDotenvx, workDir: dir}
+	got, err := runner.GetValue(context.Background(), ".env.local", "HOME")
+	if err != nil {
+		t.Fatalf("GetValue: %v", err)
+	}
+	defer zeroBytes(got)
+	if string(got) != "file-home" {
+		t.Fatalf("GetValue = %q, want file-home", string(got))
+	}
+
+	all, err := runner.GetAll(context.Background(), ".env.local")
+	if err != nil {
+		t.Fatalf("GetAll: %v", err)
+	}
+	for _, v := range all {
+		defer zeroBytes(v)
+	}
+	if string(all["HOME"]) != "file-home" {
+		t.Fatalf("GetAll HOME = %q, want file-home", string(all["HOME"]))
+	}
+
+	argsData, err := os.ReadFile(argsPath)
+	if err != nil {
+		t.Fatalf("read args: %v", err)
+	}
+	calls := strings.Split(strings.TrimSpace(string(argsData)), "\n")
+	if len(calls) != 2 {
+		t.Fatalf("logged %d calls, want 2: %q", len(calls), string(argsData))
+	}
+	for _, call := range calls {
+		if !strings.Contains(call, "--overload") {
+			t.Fatalf("dotenvx get call missing --overload: %q", call)
+		}
+	}
+}
+
 func TestRunnerSetUnsetWithDotenvxCLI(t *testing.T) {
 	if _, err := exec.LookPath("dotenvx"); err != nil {
 		t.Skip("dotenvx CLI not installed")
@@ -154,6 +210,17 @@ func TestRunnerSetUnsetWithDotenvxCLI(t *testing.T) {
 	if err := runner.Set(context.Background(), ".env.local", "BAR", []byte("keep")); err != nil {
 		t.Fatalf("Set BAR: %v", err)
 	}
+	if err := runner.Set(context.Background(), ".env.local", "HOME", []byte("file-home")); err != nil {
+		t.Fatalf("Set HOME: %v", err)
+	}
+	home, err := runner.GetValue(context.Background(), ".env.local", "HOME")
+	if err != nil {
+		t.Fatalf("GetValue HOME: %v", err)
+	}
+	defer zeroBytes(home)
+	if string(home) != "file-home" {
+		t.Fatalf("GetValue HOME = %q, want file-home", string(home))
+	}
 	if err := runner.Unset(context.Background(), ".env.local", []string{"FOO"}); err != nil {
 		t.Fatalf("Unset: %v", err)
 	}
@@ -162,8 +229,8 @@ func TestRunnerSetUnsetWithDotenvxCLI(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetKeys after Unset: %v", err)
 	}
-	if strings.Join(keys, ",") != "BAR" {
-		t.Fatalf("keys = %#v, want only BAR", keys)
+	if strings.Join(keys, ",") != "BAR,HOME" {
+		t.Fatalf("keys = %#v, want BAR and HOME", keys)
 	}
 }
 

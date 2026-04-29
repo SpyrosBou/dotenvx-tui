@@ -32,7 +32,7 @@ func StartWatching(dirs []string) (*Watcher, tea.Cmd, error) {
 
 	for _, dir := range dirs {
 		if err := w.Add(dir); err != nil {
-			w.Close()
+			_ = w.Close()
 			return nil, nil, err
 		}
 	}
@@ -60,7 +60,10 @@ func StartWatching(dirs []string) (*Watcher, tea.Cmd, error) {
 					close(events)
 					return
 				}
-				if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Remove|fsnotify.Rename) == 0 {
+				if !event.Has(fsnotify.Write) &&
+					!event.Has(fsnotify.Create) &&
+					!event.Has(fsnotify.Remove) &&
+					!event.Has(fsnotify.Rename) {
 					continue
 				}
 
@@ -86,7 +89,7 @@ func StartWatching(dirs []string) (*Watcher, tea.Cmd, error) {
 			case <-debounceC:
 				debounceTimer = nil
 				debounceC = nil
-				events <- lastPath
+				sendLatest(events, lastPath)
 
 			case _, ok := <-w.Errors:
 				if !ok {
@@ -135,8 +138,20 @@ func watchCmd(events <-chan string) tea.Cmd {
 	}
 }
 
-// ContinueWatching returns a new tea.Cmd that waits for the next event.
-// Call this after processing a FileChangedMsg to keep listening.
-func ContinueWatching(events <-chan string) tea.Cmd {
-	return watchCmd(events)
+func sendLatest(events chan string, path string) {
+	select {
+	case events <- path:
+		return
+	default:
+	}
+
+	select {
+	case <-events:
+	default:
+	}
+
+	select {
+	case events <- path:
+	default:
+	}
 }

@@ -291,7 +291,7 @@ func (o *DiffOverlay) View(width int) string {
 		}
 
 		if o.SameCount > 0 {
-			b.WriteString(fmt.Sprintf("\n  %d identical keys\n", o.SameCount))
+			fmt.Fprintf(&b, "\n  %d identical keys\n", o.SameCount)
 		}
 
 		b.WriteString("\n" + o.Styles.HelpBar.Render("j/k: scroll  esc: back"))

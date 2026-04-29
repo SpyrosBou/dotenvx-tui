@@ -17,7 +17,9 @@ func setupTestDir(t *testing.T) string {
 
 	// Create a subdirectory with env files
 	subDir := filepath.Join(dir, "apps", "api")
-	os.MkdirAll(subDir, 0o755)
+	if err := os.MkdirAll(subDir, 0o755); err != nil {
+		t.Fatalf("create subdir: %v", err)
+	}
 	writeEncrypted(t, subDir, ".env.local")
 	writeEncrypted(t, subDir, ".env.production")
 
@@ -42,12 +44,16 @@ DOTENV_PUBLIC_KEY="034a..."
 # encrypted values
 DATABASE_URL="encrypted:abc123"
 `
-	os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+		t.Fatalf("write encrypted file %s: %v", name, err)
+	}
 }
 
 func writePlain(t *testing.T, dir, name string) {
 	t.Helper()
-	os.WriteFile(filepath.Join(dir, name), []byte("SOME_KEY=value\n"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, name), []byte("SOME_KEY=value\n"), 0o644); err != nil {
+		t.Fatalf("write plain file %s: %v", name, err)
+	}
 }
 
 func TestDiscover(t *testing.T) {

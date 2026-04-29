@@ -42,21 +42,28 @@ type FilesDiscoveredMsg struct{ Files []dotenvx.EnvFile }
 type DiscoveryErrorMsg struct{ Err error }
 
 // Panel cascade messages.
-type KeysLoadedMsg struct{ Keys []string }
-type KeysLoadErrorMsg struct{ Err error }
+type KeysLoadedMsg struct {
+	File string
+	Keys []string
+}
+type KeysLoadErrorMsg struct {
+	File string
+	Err  error
+}
 
 // Preview messages.
 type ValueLoadedMsg struct {
+	File  string
 	Key   string
 	Value *secret.SecureBytes
 }
 type ValueLoadErrorMsg struct {
-	Key string
-	Err error
+	File string
+	Key  string
+	Err  error
 }
 
 // Action messages.
-type SetErrorMsg struct{ Err error }
 type CopyCompleteMsg struct{ Key string }
 type CopyMultiCompleteMsg struct{ Count int }
 type CopyErrorMsg struct{ Err error }

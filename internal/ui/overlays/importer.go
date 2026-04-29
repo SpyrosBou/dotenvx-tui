@@ -1,7 +1,6 @@
 package overlays
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -22,7 +21,6 @@ type ImportStep int
 const (
 	ImportStepPickFile ImportStep = iota
 	ImportStepSelectKeys
-	ImportStepDone
 )
 
 // ImportKey represents a key to import with selection state.
@@ -44,6 +42,7 @@ type ImportOverlay struct {
 	// Key selection
 	Keys      []ImportKey
 	KeyCursor int
+	Error     string
 
 	// Target
 	TargetFile string
@@ -66,6 +65,8 @@ func (o *ImportOverlay) Open(targetDir, targetFile string, runner *dotenvx.Runne
 	o.Runner = runner
 	o.Cursor = 0
 	o.Keys = nil
+	o.KeyCursor = 0
+	o.Error = ""
 
 	return o.findPlaintextFiles()
 }
@@ -75,6 +76,7 @@ func (o *ImportOverlay) Close() {
 	o.Active = false
 	o.Files = nil
 	o.Keys = nil
+	o.Error = ""
 }
 
 // Update handles input for the import overlay.
@@ -94,6 +96,11 @@ func (o *ImportOverlay) Update(msg tea.Msg) (tea.Cmd, bool) {
 	case importKeysLoadedMsg:
 		o.Keys = msg.Keys
 		o.KeyCursor = 0
+		if msg.Err != nil {
+			o.Error = msg.Err.Error()
+		} else {
+			o.Error = ""
+		}
 		o.Step = ImportStepSelectKeys
 		return nil, true
 
@@ -104,23 +111,26 @@ func (o *ImportOverlay) Update(msg tea.Msg) (tea.Cmd, bool) {
 				o.Step = ImportStepPickFile
 				o.Keys = nil
 				o.KeyCursor = 0
+				o.Error = ""
 				return nil, true
 			}
 			o.Close()
 			return nil, true
 
 		case key.Matches(msg, key.NewBinding(key.WithKeys("up", "k"))):
-			if o.Step == ImportStepPickFile {
+			switch o.Step {
+			case ImportStepPickFile:
 				o.Cursor = (o.Cursor - 1 + len(o.Files)) % max(1, len(o.Files))
-			} else if o.Step == ImportStepSelectKeys {
+			case ImportStepSelectKeys:
 				o.KeyCursor = (o.KeyCursor - 1 + len(o.Keys)) % max(1, len(o.Keys))
 			}
 			return nil, true
 
 		case key.Matches(msg, key.NewBinding(key.WithKeys("down", "j"))):
-			if o.Step == ImportStepPickFile {
+			switch o.Step {
+			case ImportStepPickFile:
 				o.Cursor = (o.Cursor + 1) % max(1, len(o.Files))
-			} else if o.Step == ImportStepSelectKeys {
+			case ImportStepSelectKeys:
 				o.KeyCursor = (o.KeyCursor + 1) % max(1, len(o.Keys))
 			}
 			return nil, true
@@ -145,6 +155,13 @@ func (o *ImportOverlay) handleEnter() (tea.Cmd, bool) {
 	}
 
 	if o.Step == ImportStepSelectKeys {
+		if len(o.Keys) == 0 {
+			return nil, true
+		}
+		if o.selectedCount() == 0 {
+			o.Error = "Select at least one key to import"
+			return nil, true
+		}
 		return o.executeImport(), true
 	}
 
@@ -194,37 +211,45 @@ func (o *ImportOverlay) findPlaintextFiles() tea.Cmd {
 }
 
 func (o *ImportOverlay) loadKeysFromFile(file string) tea.Cmd {
-	targetDir := o.TargetDir
+	runner := o.Runner
 	return func() tea.Msg {
-		path := filepath.Join(targetDir, file)
-		f, err := os.Open(path)
-		if err != nil {
-			return importKeysLoadedMsg{Keys: nil}
+		if runner == nil {
+			return importKeysLoadedMsg{Err: fmt.Errorf("dotenvx runner unavailable")}
 		}
-		defer f.Close()
 
-		var keys []ImportKey
-		scanner := bufio.NewScanner(f)
-		for scanner.Scan() {
-			line := strings.TrimSpace(scanner.Text())
-			if line == "" || strings.HasPrefix(line, "#") {
-				continue
-			}
-			parts := strings.SplitN(line, "=", 2)
-			if len(parts) != 2 {
-				continue
-			}
-			name := strings.TrimSpace(parts[0])
+		kv, err := runner.GetAll(context.Background(), file)
+		if err != nil {
+			return importKeysLoadedMsg{Err: fmt.Errorf("failed to read %s: %w", file, err)}
+		}
+		names := make([]string, 0, len(kv))
+		for name := range kv {
 			if validate.KeyName(name) != nil {
-				continue // skip invalid key names
+				continue
 			}
-			value := strings.TrimSpace(parts[1])
-			// Remove surrounding quotes
-			value = strings.Trim(value, `"'`)
-			keys = append(keys, ImportKey{Name: name, Value: value, Selected: true})
+			names = append(names, name)
+		}
+		sort.Strings(names)
+
+		keys := make([]ImportKey, 0, len(names))
+		for _, name := range names {
+			value := kv[name]
+			keys = append(keys, ImportKey{Name: name, Value: string(value), Selected: true})
+			for i := range value {
+				value[i] = 0
+			}
 		}
 		return importKeysLoadedMsg{Keys: keys}
 	}
+}
+
+func (o *ImportOverlay) selectedCount() int {
+	count := 0
+	for _, key := range o.Keys {
+		if key.Selected {
+			count++
+		}
+	}
+	return count
 }
 
 func (o *ImportOverlay) executeImport() tea.Cmd {
@@ -261,7 +286,8 @@ func (o *ImportOverlay) View(width int) string {
 	b.WriteString(o.Styles.OverlayTitle.Render("Import from plaintext file"))
 	b.WriteString("\n\n")
 
-	if o.Step == ImportStepPickFile {
+	switch o.Step {
+	case ImportStepPickFile:
 		if len(o.Files) == 0 {
 			b.WriteString(o.Styles.InactiveItem.Render("No unencrypted .env files found to import."))
 			b.WriteString("\n\n" + o.Styles.HelpBar.Render("esc: close"))
@@ -276,22 +302,31 @@ func (o *ImportOverlay) View(width int) string {
 			}
 			b.WriteString("\n" + o.Styles.HelpBar.Render("enter: select  esc: cancel"))
 		}
-	} else if o.Step == ImportStepSelectKeys {
-		b.WriteString(fmt.Sprintf("Keys to import into %s:\n\n", o.TargetFile))
-		for i, k := range o.Keys {
-			marker := "[ ]"
-			if k.Selected {
-				marker = "[x]"
-			}
-			if i == o.KeyCursor {
-				b.WriteString("  " + o.Styles.Cursor.Render(fmt.Sprintf(" %s %s ", marker, k.Name)) + "\n")
-			} else if k.Selected {
-				b.WriteString(fmt.Sprintf("  %s %s\n", o.Styles.ActiveItem.Render(marker), o.Styles.ActiveItem.Render(k.Name)))
-			} else {
-				b.WriteString(fmt.Sprintf("  %s %s\n", o.Styles.InactiveItem.Render(marker), o.Styles.InactiveItem.Render(k.Name)))
-			}
+	case ImportStepSelectKeys:
+		fmt.Fprintf(&b, "Keys to import into %s:\n\n", o.TargetFile)
+		if o.Error != "" {
+			b.WriteString(o.Styles.StatusError.Render(o.Error))
+			b.WriteString("\n\n")
 		}
-		b.WriteString("\n" + o.Styles.HelpBar.Render("space: toggle  enter: import  esc: cancel"))
+		if len(o.Keys) == 0 {
+			b.WriteString(o.Styles.InactiveItem.Render("No importable keys found."))
+			b.WriteString("\n\n" + o.Styles.HelpBar.Render("esc: back"))
+		} else {
+			for i, k := range o.Keys {
+				marker := "[ ]"
+				if k.Selected {
+					marker = "[x]"
+				}
+				if i == o.KeyCursor {
+					b.WriteString("  " + o.Styles.Cursor.Render(fmt.Sprintf(" %s %s ", marker, k.Name)) + "\n")
+				} else if k.Selected {
+					fmt.Fprintf(&b, "  %s %s\n", o.Styles.ActiveItem.Render(marker), o.Styles.ActiveItem.Render(k.Name))
+				} else {
+					fmt.Fprintf(&b, "  %s %s\n", o.Styles.InactiveItem.Render(marker), o.Styles.InactiveItem.Render(k.Name))
+				}
+			}
+			b.WriteString("\n" + o.Styles.HelpBar.Render("space: toggle  enter: import  esc: cancel"))
+		}
 	}
 
 	return o.Styles.Overlay.
@@ -301,7 +336,10 @@ func (o *ImportOverlay) View(width int) string {
 
 // Messages.
 type importFilesFoundMsg struct{ Files []string }
-type importKeysLoadedMsg struct{ Keys []ImportKey }
+type importKeysLoadedMsg struct {
+	Keys []ImportKey
+	Err  error
+}
 
 type ImportDoneMsg struct {
 	Count int

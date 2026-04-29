@@ -73,7 +73,7 @@ func (p *KeyListPanel) ToggleSelectAll() {
 
 // CursorItem returns the key name at the cursor position.
 func (p *KeyListPanel) CursorItem() string {
-	if len(p.Items) == 0 || p.Cursor >= len(p.Items) {
+	if len(p.Items) == 0 || p.Cursor < 0 || p.Cursor >= len(p.Items) {
 		return ""
 	}
 	return p.Items[p.Cursor]

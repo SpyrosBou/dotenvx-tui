@@ -64,7 +64,7 @@ func (r *Runner) GetValue(ctx context.Context, file, key string) ([]byte, error)
 	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, r.binary, "get", key, "-f", file)
+	cmd := exec.CommandContext(ctx, r.binary, "get", key, "-f", file, "--overload")
 	cmd.Dir = r.workDir
 	cmd.Env = minimalEnv()
 
@@ -99,7 +99,7 @@ func (r *Runner) GetAll(ctx context.Context, file string) (map[string][]byte, er
 	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, r.binary, "get", "-f", file)
+	cmd := exec.CommandContext(ctx, r.binary, "get", "-f", file, "--overload")
 	cmd.Dir = r.workDir
 	cmd.Env = minimalEnv()
 
@@ -243,7 +243,9 @@ func (r *Runner) encryptPlaintextToStdout(ctx context.Context, targetPath string
 	if err != nil {
 		return nil, fmt.Errorf("create staging directory failed: %w", err)
 	}
-	defer os.RemoveAll(stageDir)
+	defer func() {
+		_ = os.RemoveAll(stageDir)
+	}()
 
 	plainPath := filepath.Join(stageDir, filepath.Base(targetPath))
 	if err := os.WriteFile(plainPath, plain, 0o600); err != nil {
@@ -408,7 +410,9 @@ func syncDir(dir string) error {
 	if err != nil {
 		return err
 	}
-	defer d.Close()
+	defer func() {
+		_ = d.Close()
+	}()
 	return d.Sync()
 }
 
