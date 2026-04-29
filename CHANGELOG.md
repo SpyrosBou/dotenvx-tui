@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.1.4] - 2026-04-29
+
+### Fixed
+- Prevented stale asynchronous key and value loads from updating the wrong environment after fast navigation or live refresh.
+- Kept app-level resize, theme, refresh, status, and load messages active while modal overlays are open.
+- Made dotenvx reads prefer file values over the subprocess environment when keys overlap with `HOME`, `PATH`, or `TERM`.
+- Improved plaintext import by delegating `.env` parsing to dotenvx and showing clear empty/no-selection states.
+- Preserved the selected scope and environment across live file refreshes.
+
+### Changed
+- Coalesced file watcher refresh events to keep the latest event when reloads are backed up.
+- Removed unused internal error/style/clipboard scaffolding.
+
 ## [2.1.3] - 2026-04-23
 
 ### Fixed
